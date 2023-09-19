@@ -511,6 +511,11 @@ namespace BundleEditPlugin
                 //sw params
                 switch (ProfilesLibrary.DataVersion)
                 {
+                    case (int)ProfileVersion.Anthem:
+                    case (int)ProfileVersion.Fifa19:
+                    case (int)ProfileVersion.NeedForSpeedHeat:
+                    case (int)ProfileVersion.PlantsVsZombiesBattleforNeighborville:
+                    case (int)ProfileVersion.Madden20:
                     case (int)ProfileVersion.StarWarsSquadrons:
                     case (int)ProfileVersion.StarWarsBattlefrontII:
                         {
