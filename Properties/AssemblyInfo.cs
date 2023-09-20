@@ -1,4 +1,5 @@
-﻿using BundleEditPlugin;
+﻿using BundleEditorPlugin.Options;
+using BundleEditPlugin;
 using Frosty.Core.Attributes;
 using FrostySdk;
 using System.Reflection;
@@ -22,9 +23,15 @@ using System.Windows;
 // The following GUID is for the ID of the typelib if this project is exposed to COM
 [assembly: Guid("f9cb2893-2811-4d4c-9d94-073ba4cd0bf4")]
 
-[assembly: PluginDisplayName("Bundle Editor")]
-[assembly: PluginAuthor("GalaxyMan2015")]
-[assembly: PluginVersion("1.0.1.0")]
+[assembly: PluginDisplayName("Advanced Bundle Editor")]
+[assembly: PluginAuthor("GalaxyMan2015, CosmicDreams, and Y wingpilot2")]
+[assembly: PluginVersion("0.0.0.1")]
 
 [assembly: RegisterMenuExtension(typeof(BundleEditorMenuExtension))]
+[assembly: RegisterMenuExtension(typeof(GenerateNetworkCache))]
+[assembly: RegisterMenuExtension(typeof(GenerateMvdbBundleCache))]
+[assembly: RegisterMenuExtension(typeof(OpenBundleOperation))]
 [assembly: RegisterTabExtension(typeof(BundlesTabExtension))]
+[assembly: RegisterTabExtension(typeof(SuperBundlesTabExtension))]
+[assembly: RegisterOptionsExtension(typeof(BundleEditorOptions), Frosty.Core.PluginManagerType.Both)]
+[assembly: RegisterDataExplorerContextMenu(typeof(IgnoreAssetContextMenuItem))]

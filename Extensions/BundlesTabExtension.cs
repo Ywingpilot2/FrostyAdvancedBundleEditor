@@ -15,4 +15,11 @@ namespace BundleEditPlugin
 
         public override FrostyTabItem TabContent => new BundleTabItem();
     }
+
+    public class SuperBundlesTabExtension : TabExtension
+    {
+        public override string TabItemName => "Super Bundles";
+
+        public override FrostyTabItem TabContent => new SuperBundleTabItem();
+    }
 }
