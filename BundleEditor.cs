@@ -411,9 +411,358 @@ namespace BundleEditPlugin
         private TextBox bundleFilterTextBox;
 
         private BundleType selectedBundleType = BundleType.SharedBundle;
-        private Dictionary<string, AddToBundleExtension> addToBundleExtensions = new Dictionary<string, AddToBundleExtension>();
-        private Dictionary<string, RemoveFromBundleExtension> removeFromBundleExtensions = new Dictionary<string, RemoveFromBundleExtension>();
 
+        static BundleEditor()
+        {
+            DefaultStyleKeyProperty.OverrideMetadata(typeof(BundleEditor), new FrameworkPropertyMetadata(typeof(BundleEditor)));
+        }
+
+        public BundleEditor()
+        {
+
+            #region --Bundle Editing Commands--
+            AddToBundleCommand = new RelayCommand(
+                (o) =>
+                {
+                    EbxAssetEntry entry = App.EditorWindow.DataExplorer.SelectedAsset as EbxAssetEntry;
+
+                    //Lazy way to support multi select and also not needing PluginM
+                    List<AssetEntry> selectedAssets = new List<AssetEntry> { entry }; //If we only have 1 asset selected we just want 1 item in the list
+                    if (App.EditorWindow.DataExplorer.SelectedAssets != null)
+                    {
+                        selectedAssets = App.EditorWindow.DataExplorer.SelectedAssets.ToList(); //This means we have PluginM installed, meaning many assets can be here
+                    }
+                    BundleEntry bentry = bundlesListBox.SelectedItem as BundleEntry;
+
+                    FrostyTaskWindow.Show("Adding asset to bundle", "", (task) =>
+                    {
+                        foreach (EbxAssetEntry selectedAsset in selectedAssets) 
+                        {
+                            //Check to see if this bundle already has our asset
+                            if (!selectedAsset.Bundles.Contains(App.AssetManager.GetBundleId(bentry)) && !selectedAsset.AddedBundles.Contains(App.AssetManager.GetBundleId(bentry)))
+                            {
+                                BundleEditors.AddAssetToBundle(selectedAsset, bentry);
+
+                                //We also need to check if its networked
+                                if (BundleEditors.AssetAddNetworkValid(selectedAsset, bentry))
+                                {
+                                    BundleEditors.AddAssetToNetRegs(selectedAsset, bentry);
+                                }
+                                //If not, check if its a mesh object
+                                else if (BundleEditors.AssetAddMeshVariationValid(selectedAsset, bentry))
+                                {
+                                    BundleEditors.AddAssetToMVDBs(selectedAsset, bentry, task);
+                                }
+                            }
+
+                            else
+                            {
+                                App.Logger.LogError("Asset is already in {0}", bentry.Name);
+                            }
+                        }
+                    });
+
+                    RefreshExplorer();
+                    App.EditorWindow.DataExplorer.RefreshItems();
+
+                    dataExplorer.SelectAsset(entry);
+                },
+                (o) =>
+                {
+                    return App.EditorWindow.DataExplorer.SelectedAsset != null && bundlesListBox.SelectedItem != null;
+                });
+
+            RemoveFromBundleCommand = new RelayCommand(
+                (o) =>
+                {
+                    EbxAssetEntry entry = App.EditorWindow.DataExplorer.SelectedAsset as EbxAssetEntry;
+                    //Lazy way to support multi select and also not needing PluginM
+                    List<AssetEntry> selectedAssets = new List<AssetEntry> { entry }; //If we only have 1 asset selected we just want 1 item in the list
+                    if (App.EditorWindow.DataExplorer.SelectedAssets != null)
+                    {
+                        selectedAssets = App.EditorWindow.DataExplorer.SelectedAssets.ToList(); //This means we have PluginM installed, meaning many assets can be here
+                    }
+                    BundleEntry bentry = bundlesListBox.SelectedItem as BundleEntry;
+
+                    foreach (EbxAssetEntry assetEntry in selectedAssets)
+                    {
+                        if (assetEntry.AddedBundles.Contains(App.AssetManager.GetBundleId(bentry)))
+                        {
+                            BundleEditors.RemoveAssetFromBundle(assetEntry, bentry);
+
+                            if (BundleEditors.AssetRemNetworkValid(assetEntry, bentry))
+                            {
+                                BundleEditors.RemoveAssetFromNetRegs(assetEntry, bentry);
+                            }
+                            else if (BundleEditors.AssetRemMeshVariationValid(assetEntry, bentry))
+                            {
+                                BundleEditors.RemoveAssetFromMeshVariations(assetEntry, bentry);
+                            }
+                        }
+
+                        else
+                        {
+                            App.Logger.LogError("{0} cannot be removed from this asset, are you sure its an added bundle?", bentry.Name);
+                        }
+                    }
+
+                    RefreshExplorer();
+                    App.EditorWindow.DataExplorer.RefreshItems();
+                },
+                (o) =>
+                {
+                    return App.EditorWindow.DataExplorer.SelectedAsset != null && bundlesListBox.SelectedItem != null;
+                });
+
+            RecAddBundleCommand = new RelayCommand(
+                (o) =>
+                {
+                    EbxAssetEntry entry = App.EditorWindow.DataExplorer.SelectedAsset as EbxAssetEntry;
+                    //Lazy way to support multi select and also not needing PluginM
+                    List<AssetEntry> selectedAssets = new List<AssetEntry> { entry }; //If we only have 1 asset selected we just want 1 item in the list
+                    if (App.EditorWindow.DataExplorer.SelectedAssets != null)
+                    {
+                        selectedAssets = App.EditorWindow.DataExplorer.SelectedAssets.ToList(); //This means we have PluginM installed, meaning many assets can be here
+                    }
+                    BundleEntry bentry = bundlesListBox.SelectedItem as BundleEntry;
+
+                    FrostyTaskWindow.Show("Recursively adding to bundles", "Initiating...", (task) =>
+                    {
+                        //We keep track of our stats for the user
+                        int foundCount = 0;
+                        int addedCount = 0;
+                        int errorCount = 0;
+
+                        EbxAssetEntry assetToCheck = null; //This is the asset we are currently checking
+                        List<Guid> assetsToCheck = new List<Guid>(); //The list of assets we need to check. As we are searching through files this gets added to
+                        List<Guid> addedAssets = new List<Guid>(); //Lazy hack to make sure we don't check an asset twice
+                        foreach (EbxAssetEntry selectedAsset in selectedAssets)
+                        {
+                            //We need to add our selected asset and its references to the list of things for us to check
+                            assetsToCheck.Add(selectedAsset.Guid);
+                            assetsToCheck.AddRange(selectedAsset.EnumerateDependencies());
+                            while (assetsToCheck.Count != 0) //When this reaches 0, we have exhausted all possible file paths and we are done
+                            {
+                                foundCount++;
+                                if (!addedAssets.Contains(assetsToCheck[0])) //If this is not an asset we have already checked/added
+                                {
+                                    assetToCheck = App.AssetManager.GetEbxEntry(assetsToCheck[0]); //Get what is next in line to be checked
+                                    task.Update($"Adding {assetToCheck.DisplayName} to Bundle");
+
+                                    if (BundleEditors.AssetRecAddValid(assetToCheck, bentry) && assetToCheck.Type != "ShaderGraph") //Now check if its valid
+                                    {
+                                        addedCount++;
+                                        //If it is, add it to bundles and netregs
+                                        BundleEditors.AddAssetToBundle(assetToCheck, bentry);
+
+                                        if (BundleEditors.AssetAddNetworkValid(assetToCheck, bentry))
+                                        {
+                                            task.Update($"Adding {assetToCheck.DisplayName} to Net Registry");
+                                            BundleEditors.AddAssetToNetRegs(assetToCheck, bentry);
+                                        }
+                                        else if (BundleEditors.AssetAddMeshVariationValid(assetToCheck, bentry))
+                                        {
+                                            BundleEditors.AddAssetToMVDBs(assetToCheck, bentry, task);
+                                        }
+                                    } 
+                                    else if (assetToCheck.Type == "ShaderGraph")
+                                    {
+                                        App.Logger.LogError("Couldn't add {0}", assetToCheck.Name);
+                                        errorCount++;
+                                    }
+
+                                    assetsToCheck.Remove(assetToCheck.Guid); //This asset no longer needs to be checked in so it can be removed
+                                    addedAssets.Add(assetToCheck.Guid); //Since it has already been checked it should be added to the checked list
+                                    assetsToCheck.AddRange(assetToCheck.EnumerateDependencies()); //We need to check its references too though, so add them
+                                }
+                                else
+                                {
+                                    assetsToCheck.Remove(assetsToCheck[0]);
+                                }
+                            }
+
+                        }
+
+                        App.Logger.Log("I have added {0} assets out of {1} found referenced. With {2} not being added due to an error.", addedCount.ToString(), foundCount.ToString(), errorCount.ToString());
+                    });
+
+                    RefreshExplorer();
+                    App.EditorWindow.DataExplorer.RefreshItems();
+                },
+                (o) =>
+                {
+                    return App.EditorWindow.DataExplorer.SelectedAsset != null && bundlesListBox.SelectedItem != null;
+                });
+
+            RecRemBundleCommand = new RelayCommand(
+                (o) =>
+                {
+                    EbxAssetEntry entry = App.EditorWindow.DataExplorer.SelectedAsset as EbxAssetEntry;
+                    List<AssetEntry> SelectedAssets = new List<AssetEntry> { entry };
+                    if (App.EditorWindow.DataExplorer.SelectedAssets != null)
+                    {
+                        SelectedAssets = App.EditorWindow.DataExplorer.SelectedAssets.ToList();
+                    }
+                    BundleEntry bentry = bundlesListBox.SelectedItem as BundleEntry;
+
+                    FrostyTaskWindow.Show("Recursively adding to bundles", "Initiating...", (task) =>
+                    {
+                        //Keep track of our stats
+                        int foundCount = 0;
+                        int addedCount = 0;
+                        int errorCount = 0;
+
+                        EbxAssetEntry assetToCheck = null; //This is the asset we are currently checking
+                        List<Guid> assetsToCheck = new List<Guid>(); //The list of assets we need to check. As we are searching through files this gets added to
+                        List<Guid> addedAssets = new List<Guid>(); //Lazy hack to make sure we don't check an asset twice
+                        foreach (EbxAssetEntry SelectedAsset in SelectedAssets)
+                        {
+                            //We need to add our selected asset and its references to the list of things for us to check
+                            assetsToCheck.Add(SelectedAsset.Guid);
+                            assetsToCheck.AddRange(SelectedAsset.EnumerateDependencies());
+                            while (assetsToCheck.Count != 0)
+                            {
+                                foundCount++;
+                                if (!addedAssets.Contains(assetsToCheck[0])) //If this is not an asset we have already checked/added
+                                {
+                                    assetToCheck = App.AssetManager.GetEbxEntry(assetsToCheck[0]); //Get what is next in line to be checked in
+                                    task.Update($"Removing {assetToCheck.DisplayName} from Bundle");
+
+                                    if (BundleEditors.AssetRecRemValid(assetToCheck, bentry) && assetToCheck.Type != "ShaderGraph") //Now check if its valid
+                                    {
+                                        addedCount++;
+                                        //If it is, add it to bundles and netregs
+                                        BundleEditors.RemoveAssetFromBundle(assetToCheck, bentry);
+
+                                        if (BundleEditors.AssetRemNetworkValid(assetToCheck, bentry))
+                                        {
+                                            task.Update($"Removing {assetToCheck.DisplayName} from Net Registry");
+                                            BundleEditors.RemoveAssetFromNetRegs(assetToCheck, bentry);
+                                        }
+                                        else if (BundleEditors.AssetRemMeshVariationValid(assetToCheck, bentry))
+                                        {
+                                            task.Update($"Removing {assetToCheck.DisplayName} from Mesh Variation");
+                                            BundleEditors.RemoveAssetFromMeshVariations(assetToCheck, bentry);
+                                        }
+                                    }
+                                    //We should probably create an unsupported list instead, but 
+                                    else if (assetToCheck.Type == "ShaderGraph" || !assetToCheck.AddedBundles.Contains(App.AssetManager.GetBundleId(bentry)))
+                                    {
+                                        App.Logger.LogError("Couldn't add {0}", assetToCheck.Name);
+                                        errorCount++;
+                                    }
+
+                                    assetsToCheck.Remove(assetToCheck.Guid); //This asset no longer needs to be checked in so it can be removed
+                                    addedAssets.Add(assetToCheck.Guid); //Since it has already been checked it should be added to the checked list
+                                    assetsToCheck.AddRange(assetToCheck.EnumerateDependencies()); //We need to check its references too though, so add them
+                                }
+                                else
+                                {
+                                    assetsToCheck.Remove(assetsToCheck[0]);
+                                }
+                            }
+
+                        }
+
+                        App.Logger.Log("I have removed {0} assets out of {1} found referenced. With {2} not being removed due to an error.", addedCount.ToString(), foundCount.ToString(), errorCount.ToString());
+                    });
+
+                    RefreshExplorer();
+                    App.EditorWindow.DataExplorer.RefreshItems();
+                },
+                (o) =>
+                {
+                    return App.EditorWindow.DataExplorer.SelectedAsset != null && bundlesListBox.SelectedItem != null;
+                });
+            #endregion
+        }
+
+        #region --UI stuff--
+
+        public override void OnApplyTemplate()
+        {
+            base.OnApplyTemplate();
+
+            bundleTypeComboBox = GetTemplateChild(PART_BundleTypeComboBox) as ComboBox;
+            bundlesListBox = GetTemplateChild(PART_BundlesListBox) as ListBox;
+            dataExplorer = GetTemplateChild(PART_DataExplorer) as FrostyDataExplorer;
+            superBundleTextBox = GetTemplateChild(PART_SuperBundleTextBox) as TextBox;
+            bundleFilterTextBox = GetTemplateChild(PART_BundleFilterTextBox) as TextBox;
+
+            bundleTypeComboBox.SelectionChanged += bundleTypeComboBox_SelectionChanged;
+            bundlesListBox.SelectionChanged += bundlesListBox_SelectionChanged;
+            dataExplorer.SelectedAssetDoubleClick += dataExplorer_SelectedAssetDoubleClick;
+
+            bundleFilterTextBox.KeyUp += BundleFilterTextBox_KeyUp;
+            bundleFilterTextBox.LostFocus += BundleFilterTextBox_LostFocus;
+
+            bundleTypeComboBox.SelectedIndex = 2;
+        }
+
+        private void BundleFilterTextBox_LostFocus(object sender, RoutedEventArgs e)
+        {
+            if (bundleFilterTextBox.Text == "")
+                bundlesListBox.Items.Filter = null;
+            else
+            {
+                string filterText = bundleFilterTextBox.Text.ToLower();
+                bundlesListBox.Items.Filter = (object a) => { return ((BundleEntry)a).Name.IndexOf(filterText, StringComparison.OrdinalIgnoreCase) >= 0; };
+            }
+        }
+
+        private void BundleFilterTextBox_KeyUp(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                bundleFilterTextBox.MoveFocus(new TraversalRequest(FocusNavigationDirection.Next));
+            }
+        }
+
+        private void bundlesListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            RefreshExplorer();
+        }
+
+        private void bundleTypeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            bundlesListBox.Items.Filter = null;
+            bundleFilterTextBox.Text = "";
+
+            int index = bundleTypeComboBox.SelectedIndex;
+            selectedBundleType = (new BundleType[] { BundleType.SubLevel, BundleType.BlueprintBundle, BundleType.SharedBundle })[index];
+            RefreshList();
+        }
+
+        private void RefreshList()
+        {
+            bundlesListBox.ItemsSource = App.AssetManager.EnumerateBundles(selectedBundleType);
+            bundlesListBox.Items.SortDescriptions.Add(new System.ComponentModel.SortDescription("DisplayName", System.ComponentModel.ListSortDirection.Ascending));
+        }
+
+        private void RefreshExplorer()
+        {
+            BundleEntry entry = bundlesListBox.SelectedItem as BundleEntry;
+            if (entry == null)
+                return;
+            dataExplorer.ItemsSource = App.AssetManager.EnumerateEbx(entry);
+            superBundleTextBox.Text = App.AssetManager.GetSuperBundle(entry.SuperBundleId).Name;
+            if (entry.Type != BundleType.SharedBundle)
+                dataExplorer.SelectAsset(entry.Blueprint);
+        }
+
+        private void dataExplorer_SelectedAssetDoubleClick(object sender, RoutedEventArgs e)
+        {
+            EbxAssetEntry entry = dataExplorer.SelectedAsset as EbxAssetEntry;
+            App.EditorWindow.OpenAsset(entry);
+        }
+        #endregion
+    }
+
+    /// <summary>
+    /// A static class which contains all of the information and methods on Bundle Editing this game.
+    /// </summary>
+    public static class BundleEditors
+    {
         private static List<string> networkedTypes = new List<string>();
         private static List<string> networkedBundles = new List<string>();
         private static List<EbxAsset> networkRegistries = new List<EbxAsset>();
@@ -426,9 +775,26 @@ namespace BundleEditPlugin
         public static bool hasMaterialId = false; //Only used by swbf2 afaik, whether or not Materials have a MaterialId field
         public static bool hasUnlockIdTable = false;
 
-        static BundleEditor()
+        public static Dictionary<string, AddToBundleExtension> addToBundleExtensions = new Dictionary<string, AddToBundleExtension>();
+        public static Dictionary<string, RemoveFromBundleExtension> removeFromBundleExtensions = new Dictionary<string, RemoveFromBundleExtension>();
+
+        static BundleEditors()
         {
-            DefaultStyleKeyProperty.OverrideMetadata(typeof(BundleEditor), new FrameworkPropertyMetadata(typeof(BundleEditor)));
+            foreach (var type in Assembly.GetCallingAssembly().GetTypes())
+            {
+                if (type.IsSubclassOf(typeof(AddToBundleExtension)))
+                {
+                    var extension = (AddToBundleExtension)Activator.CreateInstance(type);
+                    addToBundleExtensions.Add(extension.AssetType, extension);
+                }
+                else if (type.IsSubclassOf(typeof(RemoveFromBundleExtension)))
+                {
+                    var extension = (RemoveFromBundleExtension)Activator.CreateInstance(type);
+                    removeFromBundleExtensions.Add(extension.AssetType, extension);
+                }
+            }
+            addToBundleExtensions.Add("null", new AddToBundleExtension());
+            removeFromBundleExtensions.Add("null", new RemoveFromBundleExtension());
 
             #region --Cache reading--
             //Read the cache file
@@ -559,310 +925,6 @@ namespace BundleEditPlugin
             #endregion
         }
 
-        public BundleEditor()
-        {
-            foreach (var type in Assembly.GetCallingAssembly().GetTypes())
-            {
-                if (type.IsSubclassOf(typeof(AddToBundleExtension)))
-                {
-                    var extension = (AddToBundleExtension)Activator.CreateInstance(type);
-                    addToBundleExtensions.Add(extension.AssetType, extension);
-                }
-                else if (type.IsSubclassOf(typeof(RemoveFromBundleExtension)))
-                {
-                    var extension = (RemoveFromBundleExtension)Activator.CreateInstance(type);
-                    removeFromBundleExtensions.Add(extension.AssetType, extension);
-                }
-            }
-            addToBundleExtensions.Add("null", new AddToBundleExtension());
-            removeFromBundleExtensions.Add("null", new RemoveFromBundleExtension());
-
-            #region --Bundle Editing Commands--
-            AddToBundleCommand = new RelayCommand(
-                (o) =>
-                {
-                    EbxAssetEntry entry = App.EditorWindow.DataExplorer.SelectedAsset as EbxAssetEntry;
-
-                    //Lazy way to support multi select and also not needing PluginM
-                    List<AssetEntry> selectedAssets = new List<AssetEntry> { entry }; //If we only have 1 asset selected we just want 1 item in the list
-                    if (App.EditorWindow.DataExplorer.SelectedAssets != null)
-                    {
-                        selectedAssets = App.EditorWindow.DataExplorer.SelectedAssets.ToList(); //This means we have PluginM installed, meaning many assets can be here
-                    }
-                    BundleEntry bentry = bundlesListBox.SelectedItem as BundleEntry;
-
-                    FrostyTaskWindow.Show("Adding asset to bundle", "", (task) =>
-                    {
-                        foreach (EbxAssetEntry selectedAsset in selectedAssets) 
-                        {
-                            //Check to see if this bundle already has our asset
-                            if (!selectedAsset.Bundles.Contains(App.AssetManager.GetBundleId(bentry)) && !selectedAsset.AddedBundles.Contains(App.AssetManager.GetBundleId(bentry)))
-                            {
-
-                                
-                                string key = selectedAsset.Type;
-                                if (!addToBundleExtensions.ContainsKey(selectedAsset.Type))
-                                {
-                                    key = "null"; //use default extension
-                                    foreach (string typekey in addToBundleExtensions.Keys) //Double check to see if we are a subtype, meaning extension applies
-                                    {
-                                        if (TypeLibrary.IsSubClassOf(selectedAsset.Type, typekey))
-                                        {
-                                            key = typekey;
-                                            break;
-                                        }
-                                    }
-                                }
-                                addToBundleExtensions[key].AddToBundle(selectedAsset, bentry); //Now we just add to the bundle with the assets extension
-
-                                //We also need to check if its networked
-                                if (AssetAddNetworkValid(selectedAsset, bentry))
-                                {
-                                    AddAssetToNetRegs(selectedAsset, bentry);
-                                }
-                                //If not, check if its a mesh object
-                                else if (AssetAddMeshVariationValid(selectedAsset, bentry))
-                                {
-                                    AddAssetToMVDBs(selectedAsset, bentry, task);
-                                }
-                            }
-
-                            else
-                            {
-                                App.Logger.LogError("Asset is already in {0}", bentry.Name);
-                            }
-                        }
-                    });
-
-                    RefreshExplorer();
-                    App.EditorWindow.DataExplorer.RefreshItems();
-
-                    dataExplorer.SelectAsset(entry);
-                },
-                (o) =>
-                {
-                    return App.EditorWindow.DataExplorer.SelectedAsset != null && bundlesListBox.SelectedItem != null;
-                });
-
-            RemoveFromBundleCommand = new RelayCommand(
-                (o) =>
-                {
-                    EbxAssetEntry entry = App.EditorWindow.DataExplorer.SelectedAsset as EbxAssetEntry;
-                    //Lazy way to support multi select and also not needing PluginM
-                    List<AssetEntry> selectedAssets = new List<AssetEntry> { entry }; //If we only have 1 asset selected we just want 1 item in the list
-                    if (App.EditorWindow.DataExplorer.SelectedAssets != null)
-                    {
-                        selectedAssets = App.EditorWindow.DataExplorer.SelectedAssets.ToList(); //This means we have PluginM installed, meaning many assets can be here
-                    }
-                    BundleEntry bentry = bundlesListBox.SelectedItem as BundleEntry;
-
-                    foreach (EbxAssetEntry assetEntry in selectedAssets)
-                    {
-                        if (assetEntry.AddedBundles.Contains(App.AssetManager.GetBundleId(bentry)))
-                        {
-                            string key = assetEntry.Type;
-                            if (!removeFromBundleExtensions.ContainsKey(assetEntry.Type))
-                            {
-                                key = "null"; //Use default extension
-                                foreach (string typekey in removeFromBundleExtensions.Keys)
-                                {
-                                    //double check to see this isn't a subclass of a type with an extension
-                                    if (TypeLibrary.IsSubClassOf(assetEntry.Type, typekey))
-                                    {
-                                        key = typekey;
-                                        break;
-                                    }
-                                }
-                            }
-                            removeFromBundleExtensions[key].RemoveFromBundle(assetEntry, bentry);
-
-                            if (AssetRemNetworkValid(assetEntry, bentry))
-                            {
-                                RemoveAssetFromNetRegs(assetEntry, bentry);
-                            }
-                            else if (AssetRemMeshVariationValid(assetEntry, bentry))
-                            {
-                                RemoveAssetFromMeshVariations(assetEntry, bentry);
-                            }
-                        }
-
-                        else
-                        {
-                            App.Logger.LogError("{0} cannot be removed from this asset, are you sure its an added bundle?", bentry.Name);
-                        }
-                    }
-
-                    RefreshExplorer();
-                    App.EditorWindow.DataExplorer.RefreshItems();
-                },
-                (o) =>
-                {
-                    return App.EditorWindow.DataExplorer.SelectedAsset != null && bundlesListBox.SelectedItem != null;
-                });
-
-            RecAddBundleCommand = new RelayCommand(
-                (o) =>
-                {
-                    EbxAssetEntry entry = App.EditorWindow.DataExplorer.SelectedAsset as EbxAssetEntry;
-                    //Lazy way to support multi select and also not needing PluginM
-                    List<AssetEntry> selectedAssets = new List<AssetEntry> { entry }; //If we only have 1 asset selected we just want 1 item in the list
-                    if (App.EditorWindow.DataExplorer.SelectedAssets != null)
-                    {
-                        selectedAssets = App.EditorWindow.DataExplorer.SelectedAssets.ToList(); //This means we have PluginM installed, meaning many assets can be here
-                    }
-                    BundleEntry bentry = bundlesListBox.SelectedItem as BundleEntry;
-
-                    FrostyTaskWindow.Show("Recursively adding to bundles", "Initiating...", (task) =>
-                    {
-                        //We keep track of our stats for the user
-                        int foundCount = 0;
-                        int addedCount = 0;
-                        int errorCount = 0;
-
-                        EbxAssetEntry assetToCheck = null; //This is the asset we are currently checking
-                        List<Guid> assetsToCheck = new List<Guid>(); //The list of assets we need to check. As we are searching through files this gets added to
-                        List<Guid> addedAssets = new List<Guid>(); //Lazy hack to make sure we don't check an asset twice
-                        foreach (EbxAssetEntry selectedAsset in selectedAssets)
-                        {
-                            //We need to add our selected asset and its references to the list of things for us to check
-                            assetsToCheck.Add(selectedAsset.Guid);
-                            assetsToCheck.AddRange(selectedAsset.EnumerateDependencies());
-                            while (assetsToCheck.Count != 0) //When this reaches 0, we have exhausted all possible file paths and we are done
-                            {
-                                foundCount++;
-                                if (!addedAssets.Contains(assetsToCheck[0])) //If this is not an asset we have already checked/added
-                                {
-                                    assetToCheck = App.AssetManager.GetEbxEntry(assetsToCheck[0]); //Get what is next in line to be checked
-                                    task.Update($"Adding {assetToCheck.DisplayName} to Bundle");
-
-                                    if (AssetRecAddValid(assetToCheck, bentry) && assetToCheck.Type != "ShaderGraph") //Now check if its valid
-                                    {
-                                        addedCount++;
-                                        //If it is, add it to bundles and netregs
-                                        AddAssetToBundle(assetToCheck, bentry);
-
-                                        if (AssetAddNetworkValid(assetToCheck, bentry))
-                                        {
-                                            task.Update($"Adding {assetToCheck.DisplayName} to Net Registry");
-                                            AddAssetToNetRegs(assetToCheck, bentry);
-                                        }
-                                        else if (AssetAddMeshVariationValid(assetToCheck, bentry))
-                                        {
-                                            AddAssetToMVDBs(assetToCheck, bentry, task);
-                                        }
-                                    } 
-                                    else if (assetToCheck.Type == "ShaderGraph")
-                                    {
-                                        App.Logger.LogError("Couldn't add {0}", assetToCheck.Name);
-                                        errorCount++;
-                                    }
-
-                                    assetsToCheck.Remove(assetToCheck.Guid); //This asset no longer needs to be checked in so it can be removed
-                                    addedAssets.Add(assetToCheck.Guid); //Since it has already been checked it should be added to the checked list
-                                    assetsToCheck.AddRange(assetToCheck.EnumerateDependencies()); //We need to check its references too though, so add them
-                                }
-                                else
-                                {
-                                    assetsToCheck.Remove(assetsToCheck[0]);
-                                }
-                            }
-
-                        }
-
-                        App.Logger.Log("I have added {0} assets out of {1} found referenced. With {2} not being added due to an error.", addedCount.ToString(), foundCount.ToString(), errorCount.ToString());
-                    });
-
-                    RefreshExplorer();
-                    App.EditorWindow.DataExplorer.RefreshItems();
-                },
-                (o) =>
-                {
-                    return App.EditorWindow.DataExplorer.SelectedAsset != null && bundlesListBox.SelectedItem != null;
-                });
-
-            RecRemBundleCommand = new RelayCommand(
-                (o) =>
-                {
-                    EbxAssetEntry entry = App.EditorWindow.DataExplorer.SelectedAsset as EbxAssetEntry;
-                    List<AssetEntry> SelectedAssets = new List<AssetEntry> { entry };
-                    if (App.EditorWindow.DataExplorer.SelectedAssets != null)
-                    {
-                        SelectedAssets = App.EditorWindow.DataExplorer.SelectedAssets.ToList();
-                    }
-                    BundleEntry bentry = bundlesListBox.SelectedItem as BundleEntry;
-
-                    FrostyTaskWindow.Show("Recursively adding to bundles", "Initiating...", (task) =>
-                    {
-                        //Keep track of our stats
-                        int foundCount = 0;
-                        int addedCount = 0;
-                        int errorCount = 0;
-
-                        EbxAssetEntry assetToCheck = null; //This is the asset we are currently checking
-                        List<Guid> assetsToCheck = new List<Guid>(); //The list of assets we need to check. As we are searching through files this gets added to
-                        List<Guid> addedAssets = new List<Guid>(); //Lazy hack to make sure we don't check an asset twice
-                        foreach (EbxAssetEntry SelectedAsset in SelectedAssets)
-                        {
-                            //We need to add our selected asset and its references to the list of things for us to check
-                            assetsToCheck.Add(SelectedAsset.Guid);
-                            assetsToCheck.AddRange(SelectedAsset.EnumerateDependencies());
-                            while (assetsToCheck.Count != 0)
-                            {
-                                foundCount++;
-                                if (!addedAssets.Contains(assetsToCheck[0])) //If this is not an asset we have already checked/added
-                                {
-                                    assetToCheck = App.AssetManager.GetEbxEntry(assetsToCheck[0]); //Get what is next in line to be checked in
-                                    task.Update($"Removing {assetToCheck.DisplayName} from Bundle");
-
-                                    if (AssetRecRemValid(assetToCheck, bentry) && assetToCheck.Type != "ShaderGraph") //Now check if its valid
-                                    {
-                                        addedCount++;
-                                        //If it is, add it to bundles and netregs
-                                        RemoveAssetFromBundle(assetToCheck, bentry);
-
-                                        if (AssetRemNetworkValid(assetToCheck, bentry))
-                                        {
-                                            task.Update($"Removing {assetToCheck.DisplayName} from Net Registry");
-                                            RemoveAssetFromNetRegs(assetToCheck, bentry);
-                                        }
-                                        else if (AssetRemMeshVariationValid(assetToCheck, bentry))
-                                        {
-                                            task.Update($"Removing {assetToCheck.DisplayName} from Mesh Variation");
-                                            RemoveAssetFromMeshVariations(assetToCheck, bentry);
-                                        }
-                                    }
-                                    //We should probably create an unsupported list instead, but 
-                                    else if (assetToCheck.Type == "ShaderGraph" || !assetToCheck.AddedBundles.Contains(App.AssetManager.GetBundleId(bentry)))
-                                    {
-                                        App.Logger.LogError("Couldn't add {0}", assetToCheck.Name);
-                                        errorCount++;
-                                    }
-
-                                    assetsToCheck.Remove(assetToCheck.Guid); //This asset no longer needs to be checked in so it can be removed
-                                    addedAssets.Add(assetToCheck.Guid); //Since it has already been checked it should be added to the checked list
-                                    assetsToCheck.AddRange(assetToCheck.EnumerateDependencies()); //We need to check its references too though, so add them
-                                }
-                                else
-                                {
-                                    assetsToCheck.Remove(assetsToCheck[0]);
-                                }
-                            }
-
-                        }
-
-                        App.Logger.Log("I have removed {0} assets out of {1} found referenced. With {2} not being removed due to an error.", addedCount.ToString(), foundCount.ToString(), errorCount.ToString());
-                    });
-
-                    RefreshExplorer();
-                    App.EditorWindow.DataExplorer.RefreshItems();
-                },
-                (o) =>
-                {
-                    return App.EditorWindow.DataExplorer.SelectedAsset != null && bundlesListBox.SelectedItem != null;
-                });
-            #endregion
-        }
-
         #region --Add to Bundle Methods--
 
         /// <summary>
@@ -870,7 +932,7 @@ namespace BundleEditPlugin
         /// </summary>
         /// <param name="AssetToBundle">Asset to add</param>
         /// <param name="SelectedBundle">Bundle to add to</param>
-        public void AddAssetToBundle(EbxAssetEntry AssetToBundle, BundleEntry SelectedBundle)
+        public static void AddAssetToBundle(EbxAssetEntry AssetToBundle, BundleEntry SelectedBundle)
         {
             EbxAsset ebx = App.AssetManager.GetEbx(AssetToBundle);
             App.AssetManager.ModifyEbx(AssetToBundle.Name, ebx);
@@ -896,7 +958,7 @@ namespace BundleEditPlugin
         /// </summary>
         /// <param name="AssetToBundle"></param>
         /// <param name="SelectedBundle"></param>
-        public void AddAssetToNetRegs(EbxAssetEntry AssetToBundle, BundleEntry SelectedBundle)
+        public static void AddAssetToNetRegs(EbxAssetEntry AssetToBundle, BundleEntry SelectedBundle)
         {
             EbxAsset ebx = App.AssetManager.GetEbx(AssetToBundle);
             List<object> ebxObjects = ebx.Objects.ToList();
@@ -939,12 +1001,17 @@ namespace BundleEditPlugin
                     }
                 }
             }
-            if (hasUnlockIdTable && TypeLibrary.IsSubClassOf(AssetToBundle.Type, "UnlockAssetBase"))
+
+            EbxAssetEntry lvlAssetEntry = App.AssetManager.GetEbxEntry(App.AssetManager.GetSuperBundle(SelectedBundle.SuperBundleId).Name.Remove(0, 6));
+            if (hasUnlockIdTable && TypeLibrary.IsSubClassOf(AssetToBundle.Type, "UnlockAssetBase") && lvlAssetEntry != null)
             {
-                EbxAsset lvlEbx = App.AssetManager.GetEbx(App.AssetManager.GetSuperBundle(SelectedBundle.SuperBundleId).Name.Remove(0, 6));
+                EbxAsset lvlEbx = App.AssetManager.GetEbx(lvlAssetEntry);
                 uint unlockId = ((dynamic)ebx.RootObject).Identifier;
-                ((dynamic)lvlEbx.RootObject).UnlockIdTable.Identifiers.Add(unlockId);
-                App.AssetManager.ModifyEbx(App.AssetManager.GetEbxEntry(lvlEbx.FileGuid).Name, lvlEbx);
+                if (!((dynamic)lvlEbx.RootObject).UnlockIdTable.Identifiers.Contains(unlockId))
+                {
+                    ((dynamic)lvlEbx.RootObject).UnlockIdTable.Identifiers.Add(unlockId);
+                    App.AssetManager.ModifyEbx(App.AssetManager.GetEbxEntry(lvlEbx.FileGuid).Name, lvlEbx);
+                }
             }
         }
 
@@ -954,7 +1021,7 @@ namespace BundleEditPlugin
         /// <param name="AssetToBundle"></param>
         /// <param name="SelectedBundle"></param>
         /// <param name="task">Requires a stupid task window because cache loading requires it</param>
-        public void AddAssetToMVDBs(EbxAssetEntry AssetToBundle, BundleEntry SelectedBundle, FrostyTaskWindow task)
+        public static void AddAssetToMVDBs(EbxAssetEntry AssetToBundle, BundleEntry SelectedBundle, FrostyTaskWindow task)
         {
             //Make sure the MVDB cache is loaded
             if (!MeshVariationDb.IsLoaded)
@@ -1216,7 +1283,7 @@ namespace BundleEditPlugin
         /// </summary>
         /// <param name="AssetToRemove"></param>
         /// <param name="SelectedBundle"></param>
-        public void RemoveAssetFromBundle(EbxAssetEntry AssetToRemove, BundleEntry SelectedBundle)
+        public static void RemoveAssetFromBundle(EbxAssetEntry AssetToRemove, BundleEntry SelectedBundle)
         {
             string key = AssetToRemove.Type;
             if (!removeFromBundleExtensions.ContainsKey(AssetToRemove.Type))
@@ -1239,7 +1306,7 @@ namespace BundleEditPlugin
         /// </summary>
         /// <param name="AssetToRemove"></param>
         /// <param name="SelectedBundle"></param>
-        public void RemoveAssetFromNetRegs(EbxAssetEntry AssetToRemove, BundleEntry SelectedBundle)
+        public static void RemoveAssetFromNetRegs(EbxAssetEntry AssetToRemove, BundleEntry SelectedBundle)
         {
             EbxAsset ebx = App.AssetManager.GetEbx(AssetToRemove);
             List<object> ebxObjects = ebx.Objects.ToList();
@@ -1275,6 +1342,17 @@ namespace BundleEditPlugin
                 }
             }
 
+            EbxAssetEntry lvlAssetEntry = App.AssetManager.GetEbxEntry(App.AssetManager.GetSuperBundle(SelectedBundle.SuperBundleId).Name.Remove(0, 6));
+            if (hasUnlockIdTable && TypeLibrary.IsSubClassOf(SelectedBundle.Type, "UnlockAssetBase") && lvlAssetEntry != null)
+            {
+                EbxAsset lvlEbx = App.AssetManager.GetEbx(lvlAssetEntry);
+                uint unlockId = ((dynamic)ebx.RootObject).Identifier;
+                if (((dynamic)lvlEbx.RootObject).UnlockIdTable.Identifiers.Contains(unlockId))
+                {
+                    ((dynamic)lvlEbx.RootObject).UnlockIdTable.Identifiers.Remove(unlockId);
+                    App.AssetManager.ModifyEbx(App.AssetManager.GetEbxEntry(lvlEbx.FileGuid).Name, lvlEbx);
+                }
+            }
         }
 
         /// <summary>
@@ -1282,7 +1360,7 @@ namespace BundleEditPlugin
         /// </summary>
         /// <param name="AssetToRemove"></param>
         /// <param name="SelectedBundle"></param>
-        public void RemoveAssetFromMeshVariations(EbxAssetEntry AssetToRemove, BundleEntry SelectedBundle)
+        public static void RemoveAssetFromMeshVariations(EbxAssetEntry AssetToRemove, BundleEntry SelectedBundle)
         {
             EbxAsset ebx = App.AssetManager.GetEbx(AssetToRemove);
             List<object> ebxObjects = ebx.Objects.ToList();
@@ -1303,7 +1381,7 @@ namespace BundleEditPlugin
                     {
                         mvdbObject.Entries.RemoveAt(i);
                     }
-                    else if(entry.VariationAssetNameHash == ((dynamic)ebx.RootObject).NameHash) //If its a variation though, we just remove the variation
+                    else if (entry.VariationAssetNameHash == ((dynamic)ebx.RootObject).NameHash) //If its a variation though, we just remove the variation
                     {
                         mvdbObject.Entries.RemoveAt(i);
                         break;
@@ -1358,7 +1436,7 @@ namespace BundleEditPlugin
         /// <param name="AssetToCheck"></param>
         /// <param name="BundleToCheck"></param>
         /// <returns>A bool on whether or not the asset is valid</returns>
-        public bool AssetRecAddValid(EbxAssetEntry AssetToCheck, BundleEntry BundleToCheck)
+        public static bool AssetRecAddValid(EbxAssetEntry AssetToCheck, BundleEntry BundleToCheck)
         {
             bool IsValid = false;
 
@@ -1389,12 +1467,12 @@ namespace BundleEditPlugin
         /// <param name="AssetToCheck"></param>
         /// <param name="BundleToCheck"></param>
         /// <returns>A bool on whether or not the asset is valid</returns>
-        public bool AssetAddNetworkValid(EbxAssetEntry AssetToCheck, BundleEntry BundleToCheck)
+        public static bool AssetAddNetworkValid(EbxAssetEntry AssetToCheck, BundleEntry BundleToCheck)
         {
             return networkedTypes.Contains(AssetToCheck.Type) && (networkedBundles.Contains(BundleToCheck.Name) || BundleToCheck.Added) && Config.Get("AllowRootNetreg", false);
         }
 
-        public bool AssetAddMeshVariationValid(EbxAssetEntry AssetToCheck, BundleEntry BundleToCheck)
+        public static bool AssetAddMeshVariationValid(EbxAssetEntry AssetToCheck, BundleEntry BundleToCheck)
         {
             return (TypeLibrary.IsSubClassOf(AssetToCheck.Type, "MeshAsset") || AssetToCheck.Type == "ObjectVariation") && (mvdbBundles.Contains(BundleToCheck.Name) || BundleToCheck.Added) && Config.Get("AllowMVDB", false);
         }
@@ -1409,7 +1487,7 @@ namespace BundleEditPlugin
         /// <param name="AssetToCheck"></param>
         /// <param name="BundleToCheck"></param>
         /// <returns>A bool on whether or not the asset is valid</returns>
-        public bool AssetRecRemValid(EbxAssetEntry AssetToCheck, BundleEntry BundleToCheck)
+        public static bool AssetRecRemValid(EbxAssetEntry AssetToCheck, BundleEntry BundleToCheck)
         {
             bool IsValid = false;
 
@@ -1440,97 +1518,17 @@ namespace BundleEditPlugin
         /// <param name="AssetToCheck"></param>
         /// <param name="BundleToCheck"></param>
         /// <returns>A bool on whether or not the asset is valid</returns>
-        public bool AssetRemNetworkValid(EbxAssetEntry AssetToCheck, BundleEntry BundleToCheck)
+        public static bool AssetRemNetworkValid(EbxAssetEntry AssetToCheck, BundleEntry BundleToCheck)
         {
             EbxAssetEntry registry = App.AssetManager.GetEbxEntry(networkRegistries[networkedBundles.IndexOf(BundleToCheck.Name)].FileGuid);
             return networkedTypes.Contains(AssetToCheck.Type) && (networkedBundles.Contains(BundleToCheck.Name) || BundleToCheck.Added) && Config.Get("AllowRootNetreg", false) && registry.EnumerateDependencies().Contains(AssetToCheck.Guid);
         }
 
-        public bool AssetRemMeshVariationValid(EbxAssetEntry AssetToCheck, BundleEntry BundleToCheck)
+        public static bool AssetRemMeshVariationValid(EbxAssetEntry AssetToCheck, BundleEntry BundleToCheck)
         {
             return (TypeLibrary.IsSubClassOf(AssetToCheck.Type, "MeshAsset") || AssetToCheck.Type == "ObjectVariation") && (mvdbBundles.Contains(BundleToCheck.Name) && App.AssetManager.GetEbxEntry(mvdbs[mvdbBundles.IndexOf(BundleToCheck.Name)].FileGuid).EnumerateDependencies().Contains(AssetToCheck.Guid) || BundleToCheck.Added) && Config.Get("AllowMVDB", false);
         }
 
-        #endregion
-
-        #region --UI stuff--
-
-        public override void OnApplyTemplate()
-        {
-            base.OnApplyTemplate();
-
-            bundleTypeComboBox = GetTemplateChild(PART_BundleTypeComboBox) as ComboBox;
-            bundlesListBox = GetTemplateChild(PART_BundlesListBox) as ListBox;
-            dataExplorer = GetTemplateChild(PART_DataExplorer) as FrostyDataExplorer;
-            superBundleTextBox = GetTemplateChild(PART_SuperBundleTextBox) as TextBox;
-            bundleFilterTextBox = GetTemplateChild(PART_BundleFilterTextBox) as TextBox;
-
-            bundleTypeComboBox.SelectionChanged += bundleTypeComboBox_SelectionChanged;
-            bundlesListBox.SelectionChanged += bundlesListBox_SelectionChanged;
-            dataExplorer.SelectedAssetDoubleClick += dataExplorer_SelectedAssetDoubleClick;
-
-            bundleFilterTextBox.KeyUp += BundleFilterTextBox_KeyUp;
-            bundleFilterTextBox.LostFocus += BundleFilterTextBox_LostFocus;
-
-            bundleTypeComboBox.SelectedIndex = 2;
-        }
-
-        private void BundleFilterTextBox_LostFocus(object sender, RoutedEventArgs e)
-        {
-            if (bundleFilterTextBox.Text == "")
-                bundlesListBox.Items.Filter = null;
-            else
-            {
-                string filterText = bundleFilterTextBox.Text.ToLower();
-                bundlesListBox.Items.Filter = (object a) => { return ((BundleEntry)a).Name.IndexOf(filterText, StringComparison.OrdinalIgnoreCase) >= 0; };
-            }
-        }
-
-        private void BundleFilterTextBox_KeyUp(object sender, KeyEventArgs e)
-        {
-            if (e.Key == Key.Enter)
-            {
-                bundleFilterTextBox.MoveFocus(new TraversalRequest(FocusNavigationDirection.Next));
-            }
-        }
-
-        private void bundlesListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            RefreshExplorer();
-        }
-
-        private void bundleTypeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            bundlesListBox.Items.Filter = null;
-            bundleFilterTextBox.Text = "";
-
-            int index = bundleTypeComboBox.SelectedIndex;
-            selectedBundleType = (new BundleType[] { BundleType.SubLevel, BundleType.BlueprintBundle, BundleType.SharedBundle })[index];
-            RefreshList();
-        }
-
-        private void RefreshList()
-        {
-            bundlesListBox.ItemsSource = App.AssetManager.EnumerateBundles(selectedBundleType);
-            bundlesListBox.Items.SortDescriptions.Add(new System.ComponentModel.SortDescription("DisplayName", System.ComponentModel.ListSortDirection.Ascending));
-        }
-
-        private void RefreshExplorer()
-        {
-            BundleEntry entry = bundlesListBox.SelectedItem as BundleEntry;
-            if (entry == null)
-                return;
-            dataExplorer.ItemsSource = App.AssetManager.EnumerateEbx(entry);
-            superBundleTextBox.Text = App.AssetManager.GetSuperBundle(entry.SuperBundleId).Name;
-            if (entry.Type != BundleType.SharedBundle)
-                dataExplorer.SelectAsset(entry.Blueprint);
-        }
-
-        private void dataExplorer_SelectedAssetDoubleClick(object sender, RoutedEventArgs e)
-        {
-            EbxAssetEntry entry = dataExplorer.SelectedAsset as EbxAssetEntry;
-            App.EditorWindow.OpenAsset(entry);
-        }
         #endregion
     }
 }

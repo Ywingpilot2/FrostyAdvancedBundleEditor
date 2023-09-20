@@ -42,7 +42,6 @@ namespace BundleEditorPlugin
         private void ReadBundle(FrostyTaskWindow task)
         {
             BunOpProperties opProperties = new BunOpProperties();
-            BundleEditor bundleEditor = new BundleEditor();
 
             StreamReader sr = new StreamReader(BunOpPath);
             string line = sr.ReadLine();
@@ -50,9 +49,14 @@ namespace BundleEditorPlugin
             {
                 //First we need to setup the line for reading
                 int commentposition = line.IndexOf("//");
-                if (commentposition != -1)
+                if (commentposition != -1 && commentposition != 0)
                 {
-                    line.Remove(commentposition);
+                    line = line.Remove(commentposition).TrimEnd(' ');
+                }
+                else if (commentposition == 0)
+                {
+                    line = sr.ReadLine();
+                    continue;
                 }
 
                 if (line.StartsWith("["))
@@ -62,49 +66,49 @@ namespace BundleEditorPlugin
                         #region --Parse Bools--
                         case "AddToNetregs ":
                             {
-                                Boolean.TryParse(line.Split('=').Last().TrimStart(' '), out bool value);
+                                Boolean.TryParse(line.Split('=').Last().TrimStart(' ').TrimEnd(']'), out bool value);
                                 opProperties.AddToNetregs = value;
                                 break;
                             }
                         case "RemoveFromNetregs ":
                             {
-                                Boolean.TryParse(line.Split('=').Last().TrimStart(' '), out bool value);
+                                Boolean.TryParse(line.Split('=').Last().TrimStart(' ').TrimEnd(']'), out bool value);
                                 opProperties.RemoveFromNetregs = value;
                                 break;
                             }
                         case "AddToMeshVariations ":
                             {
-                                Boolean.TryParse(line.Split('=').Last().TrimStart(' '), out bool value);
+                                Boolean.TryParse(line.Split('=').Last().TrimStart(' ').TrimEnd(']'), out bool value);
                                 opProperties.AddToMeshVariations = value;
                                 break;
                             }
                         case "RemoveFromMeshVariations ":
                             {
-                                Boolean.TryParse(line.Split('=').Last().TrimStart(' '), out bool value);
+                                Boolean.TryParse(line.Split('=').Last().TrimStart(' ').TrimEnd(']'), out bool value);
                                 opProperties.RemoveFromMeshVariations = value;
                                 break;
                             }
                         case "IsRecursive ":
                             {
-                                Boolean.TryParse(line.Split('=').Last().TrimStart(' '), out bool value);
+                                Boolean.TryParse(line.Split('=').Last().TrimStart(' ').TrimEnd(']'), out bool value);
                                 opProperties.IsRecursive = value;
                                 break;
                             }
                         case "FollowUserPreferences ":
                             {
-                                Boolean.TryParse(line.Split('=').Last().TrimStart(' '), out bool value);
+                                Boolean.TryParse(line.Split('=').Last().TrimStart(' ').TrimEnd(']'), out bool value);
                                 opProperties.FollowUserPreferences = value;
                                 break;
                             }
                         case "IgnoreTypes ":
                             {
-                                Boolean.TryParse(line.Split('=').Last().TrimStart(' '), out bool value);
+                                Boolean.TryParse(line.Split('=').Last().TrimStart(' ').TrimEnd(']'), out bool value);
                                 opProperties.IgnoreTypes = value;
                                 break;
                             }
                         case "UseExclusiveTypes ":
                             {
-                                Boolean.TryParse(line.Split('=').Last().TrimStart(' '), out bool value);
+                                Boolean.TryParse(line.Split('=').Last().TrimStart(' ').TrimEnd(']'), out bool value);
                                 opProperties.UseExclusiveTypes = value;
                                 break;
                             }
@@ -115,7 +119,7 @@ namespace BundleEditorPlugin
                             {
                                 //Boolean.TryParse(line.Split('=').Last().TrimStart(' '), out bool value);
                                 List<int> values = new List<int>();
-                                foreach (string bundle in line.Split('=').Last().TrimStart(' ').Split(',').ToList())
+                                foreach (string bundle in line.Split('=').Last().TrimStart(' ').TrimEnd(']').Split(',').ToList())
                                 {
                                     values.Add(App.AssetManager.GetBundleId(bundle));
                                 }
@@ -126,7 +130,7 @@ namespace BundleEditorPlugin
                             {
                                 //Boolean.TryParse(line.Split('=').Last().TrimStart(' '), out bool value);
                                 List<Guid> values = new List<Guid>();
-                                foreach (string asset in line.Split('=').Last().TrimStart(' ').Split(',').ToList())
+                                foreach (string asset in line.Split('=').Last().TrimStart(' ').TrimEnd(']').Split(',').ToList())
                                 {
                                     values.Add(App.AssetManager.GetEbxEntry(asset).Guid);
                                 }
@@ -135,12 +139,12 @@ namespace BundleEditorPlugin
                             }
                         case "IgnoredTypes ":
                             {
-                                opProperties.IgnoredTypes = line.Split('=').Last().TrimStart(' ').Split(',').ToList();
+                                opProperties.IgnoredTypes = line.Split('=').Last().TrimStart(' ').TrimEnd(']').Split(',').ToList();
                                 break;
                             }
                         case "ExclusiveTypes ":
                             {
-                                opProperties.ExclusiveTypes = line.Split('=').Last().TrimStart(' ').Split(',').ToList();
+                                opProperties.ExclusiveTypes = line.Split('=').Last().TrimStart(' ').TrimEnd(']').Split(',').ToList();
                                 break;
                             }
                             #endregion
@@ -148,7 +152,7 @@ namespace BundleEditorPlugin
                 }
                 else
                 {
-                    opProperties.TriggerInstruction(line.Replace("{", "").Replace("}", ""), bundleEditor, task);
+                    opProperties.TriggerInstruction(line.Replace("{", "").Replace("}", ""), task);
                 }
 
                 line = sr.ReadLine(); //This will set the current line to the next line
@@ -178,7 +182,7 @@ namespace BundleEditorPlugin
         public List<string> ExclusiveTypes = new List<string>(); //Relies on UseExclusiveTypes
         #endregion
 
-        public void TriggerInstruction(string InstructionName, BundleEditor editor, FrostyTaskWindow task)
+        public void TriggerInstruction(string InstructionName, FrostyTaskWindow task)
         {
             switch (InstructionName)
             {
@@ -196,18 +200,18 @@ namespace BundleEditorPlugin
                                 BundleEntry bundle = App.AssetManager.GetBundleEntry(bunId);
 
                                 //Adding
-                                if ((editor.AssetRecAddValid(currentAsset, bundle) || ForceAdd) && !bundledAssets.Contains(currentAsset.Guid))
+                                if ((BundleEditors.AssetRecAddValid(currentAsset, bundle) || ForceAdd) && !bundledAssets.Contains(currentAsset.Guid))
                                 {
                                     if ((IgnoreTypes && !IgnoredTypes.Contains(currentAsset.Type)) || (UseExclusiveTypes && ExclusiveTypes.Contains(currentAsset.Type)) || (!IgnoreTypes && !UseExclusiveTypes))
                                     {
-                                        editor.AddAssetToBundle(currentAsset, bundle);
-                                        if (AddToNetregs && editor.AssetAddNetworkValid(currentAsset, bundle))
+                                        BundleEditors.AddAssetToBundle(currentAsset, bundle);
+                                        if (AddToNetregs && BundleEditors.AssetAddNetworkValid(currentAsset, bundle))
                                         {
-                                            editor.AddAssetToNetRegs(currentAsset, bundle);
+                                            BundleEditors.AddAssetToNetRegs(currentAsset, bundle);
                                         }
-                                        else if (AddToMeshVariations && editor.AssetAddMeshVariationValid(currentAsset, bundle))
+                                        else if (AddToMeshVariations && BundleEditors.AssetAddMeshVariationValid(currentAsset, bundle))
                                         {
-                                            editor.AddAssetToMVDBs(currentAsset, bundle, task);
+                                            BundleEditors.AddAssetToMVDBs(currentAsset, bundle, task);
                                         }
                                     }
                                 }
