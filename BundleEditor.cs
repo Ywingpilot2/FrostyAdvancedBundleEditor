@@ -1300,6 +1300,9 @@ namespace BundleEditPlugin
         /// <param name="SelectedBundle"></param>
         public static void RemoveAssetFromBundle(EbxAssetEntry AssetToRemove, BundleEntry SelectedBundle)
         {
+            EbxAsset ebx = App.AssetManager.GetEbx(AssetToRemove);
+            App.AssetManager.ModifyEbx(AssetToRemove.Name, ebx);
+
             string key = AssetToRemove.Type;
             if (!removeFromBundleExtensions.ContainsKey(AssetToRemove.Type))
             {
