@@ -577,7 +577,7 @@ namespace BundleEditorPlugin
         }
 
         /// <summary>
-        /// Resets command specific properties to default
+        /// Resets all properties to default values
         /// </summary>
         public void ResetPropertiesToDefault()
         {
