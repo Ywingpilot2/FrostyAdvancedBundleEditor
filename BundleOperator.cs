@@ -286,7 +286,7 @@ namespace BundleEditorPlugin
         public bool AddToUnlockIdTables = false; //Only applies to games with UnlockIdTables
         public bool RemoveFromUnlockIdTables = false; //Only applies to games with UnlockIdTables
         public bool IsRecursive = false;
-        public bool IgnoreTypes = true;
+        public bool IgnoreTypes = false;
         public bool ExclusiveTypes = false;
         public bool AffectsRecursive = false;
         public bool ForceAdd = false;
@@ -591,7 +591,7 @@ namespace BundleEditorPlugin
             AddToUnlockIdTables = false; //Only applies to games with UnlockIdTables
             RemoveFromUnlockIdTables = false; //Only applies to games with UnlockIdTables
             IsRecursive = false;
-            IgnoreTypes = true;
+            IgnoreTypes = false;
             ExclusiveTypes = false;
             AffectsRecursive = false;
             ForceAdd = false;
