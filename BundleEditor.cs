@@ -484,27 +484,30 @@ namespace BundleEditPlugin
                     }
                     BundleEntry bentry = bundlesListBox.SelectedItem as BundleEntry;
 
-                    foreach (EbxAssetEntry assetEntry in selectedAssets)
+                    FrostyTaskWindow.Show("Removing asset from bundle", "", (task) =>
                     {
-                        if (assetEntry.AddedBundles.Contains(App.AssetManager.GetBundleId(bentry)))
+                        foreach (EbxAssetEntry assetEntry in selectedAssets)
                         {
-                            BundleEditors.RemoveAssetFromBundle(assetEntry, bentry);
+                            if (assetEntry.AddedBundles.Contains(App.AssetManager.GetBundleId(bentry)))
+                            {
+                                BundleEditors.RemoveAssetFromBundle(assetEntry, bentry);
 
-                            if (BundleEditors.AssetRemNetworkValid(assetEntry, bentry))
-                            {
-                                BundleEditors.RemoveAssetFromNetRegs(assetEntry, bentry);
+                                if (BundleEditors.AssetRemNetworkValid(assetEntry, bentry))
+                                {
+                                    BundleEditors.RemoveAssetFromNetRegs(assetEntry, bentry);
+                                }
+                                else if (BundleEditors.AssetRemMeshVariationValid(assetEntry, bentry))
+                                {
+                                    BundleEditors.RemoveAssetFromMeshVariations(assetEntry, bentry);
+                                }
                             }
-                            else if (BundleEditors.AssetRemMeshVariationValid(assetEntry, bentry))
+
+                            else
                             {
-                                BundleEditors.RemoveAssetFromMeshVariations(assetEntry, bentry);
+                                App.Logger.LogError("{0} cannot be removed from this asset, are you sure its an added bundle?", bentry.Name);
                             }
                         }
-
-                        else
-                        {
-                            App.Logger.LogError("{0} cannot be removed from this asset, are you sure its an added bundle?", bentry.Name);
-                        }
-                    }
+                    });
 
                     RefreshExplorer();
                     App.EditorWindow.DataExplorer.RefreshItems();
@@ -780,6 +783,8 @@ namespace BundleEditPlugin
 
         static BundleEditors()
         {
+            App.Logger.Log("First time load, need to wake up ABE. This may take a bit...");
+
             foreach (var type in Assembly.GetCallingAssembly().GetTypes())
             {
                 if (type.IsSubclassOf(typeof(AddToBundleExtension)))
@@ -923,6 +928,8 @@ namespace BundleEditPlugin
                     }
             }
             #endregion
+
+            App.Logger.Log("Done!");
         }
 
         #region --Add to Bundle Methods--
@@ -981,9 +988,9 @@ namespace BundleEditPlugin
             }
             else
             {
-                foreach (EbxAssetEntry networkRegistry in App.AssetManager.EnumerateEbx("NetworkRegistryAsset"))
+                foreach (EbxAssetEntry networkRegistry in App.AssetManager.EnumerateEbx(SelectedBundle))
                 {
-                    if (networkRegistry.AddedBundles[0] == App.AssetManager.GetBundleId(SelectedBundle))
+                    if (networkRegistry.Type == "NetworkRegistryAsset")
                     {
                         EbxAsset netRegEbx = App.AssetManager.GetEbx(networkRegistry);
                         List<PointerRef> objects = ((dynamic)netRegEbx.RootObject).Objects;
@@ -999,18 +1006,6 @@ namespace BundleEditPlugin
                         netRegEbx.AddDependency(AssetToBundle.Guid);
                         App.AssetManager.ModifyEbx(App.AssetManager.GetEbxEntry(netRegEbx.FileGuid).Name, netRegEbx);
                     }
-                }
-            }
-
-            EbxAssetEntry lvlAssetEntry = App.AssetManager.GetEbxEntry(App.AssetManager.GetSuperBundle(SelectedBundle.SuperBundleId).Name.Remove(0, 6));
-            if (hasUnlockIdTable && TypeLibrary.IsSubClassOf(AssetToBundle.Type, "UnlockAssetBase") && lvlAssetEntry != null)
-            {
-                EbxAsset lvlEbx = App.AssetManager.GetEbx(lvlAssetEntry);
-                uint unlockId = ((dynamic)ebx.RootObject).Identifier;
-                if (!((dynamic)lvlEbx.RootObject).UnlockIdTable.Identifiers.Contains(unlockId))
-                {
-                    ((dynamic)lvlEbx.RootObject).UnlockIdTable.Identifiers.Add(unlockId);
-                    App.AssetManager.ModifyEbx(App.AssetManager.GetEbxEntry(lvlEbx.FileGuid).Name, lvlEbx);
                 }
             }
         }
@@ -1274,6 +1269,26 @@ namespace BundleEditPlugin
             App.AssetManager.ModifyEbx(App.AssetManager.GetEbxEntry(mvdb.FileGuid).Name, mvdb);
         }
 
+        /// <summary>
+        /// Adds an unlock asset to a UnlockIdTable if the game has one and its a UnlockAssetBase subtype
+        /// </summary>
+        /// <param name="AssetToBundle"></param>
+        /// <param name="SelectedBundle"></param>
+        public static void AddAssetToTables(EbxAssetEntry AssetToBundle, BundleEntry SelectedBundle)
+        {
+            EbxAsset ebx = App.AssetManager.GetEbx(AssetToBundle);
+            EbxAssetEntry lvlAssetEntry = App.AssetManager.GetEbxEntry(App.AssetManager.GetSuperBundle(SelectedBundle.SuperBundleId).Name.Remove(0, 6));
+            if (hasUnlockIdTable && TypeLibrary.IsSubClassOf(AssetToBundle.Type, "UnlockAssetBase") && lvlAssetEntry != null)
+            {
+                EbxAsset lvlEbx = App.AssetManager.GetEbx(lvlAssetEntry);
+                uint unlockId = ((dynamic)ebx.RootObject).Identifier;
+                if (!((dynamic)lvlEbx.RootObject).UnlockIdTable.Identifiers.Contains(unlockId))
+                {
+                    ((dynamic)lvlEbx.RootObject).UnlockIdTable.Identifiers.Add(unlockId);
+                    App.AssetManager.ModifyEbx(App.AssetManager.GetEbxEntry(lvlEbx.FileGuid).Name, lvlEbx);
+                }
+            }
+        }
         #endregion
 
         #region --Remove from Bundle Methods--
@@ -1325,9 +1340,9 @@ namespace BundleEditPlugin
             }
             else
             {
-                foreach (EbxAssetEntry networkRegistry in App.AssetManager.EnumerateEbx("NetworkRegistryAsset"))
+                foreach (EbxAssetEntry networkRegistry in App.AssetManager.EnumerateEbx(SelectedBundle))
                 {
-                    if (networkRegistry.AddedBundles[0] == App.AssetManager.GetBundleId(SelectedBundle))
+                    if (networkRegistry.Type == "NetworkRegistryAsset")
                     {
                         EbxAsset netRegEbx = App.AssetManager.GetEbx(networkRegistry);
                         List<PointerRef> objects = ((dynamic)netRegEbx.RootObject).Objects;
@@ -1339,18 +1354,6 @@ namespace BundleEditPlugin
                         networkRegistry.ModifiedEntry.DependentAssets.Remove(AssetToRemove.Guid);
                         App.AssetManager.ModifyEbx(AssetToRemove.Name, ebx);
                     }
-                }
-            }
-
-            EbxAssetEntry lvlAssetEntry = App.AssetManager.GetEbxEntry(App.AssetManager.GetSuperBundle(SelectedBundle.SuperBundleId).Name.Remove(0, 6));
-            if (hasUnlockIdTable && TypeLibrary.IsSubClassOf(SelectedBundle.Type, "UnlockAssetBase") && lvlAssetEntry != null)
-            {
-                EbxAsset lvlEbx = App.AssetManager.GetEbx(lvlAssetEntry);
-                uint unlockId = ((dynamic)ebx.RootObject).Identifier;
-                if (((dynamic)lvlEbx.RootObject).UnlockIdTable.Identifiers.Contains(unlockId))
-                {
-                    ((dynamic)lvlEbx.RootObject).UnlockIdTable.Identifiers.Remove(unlockId);
-                    App.AssetManager.ModifyEbx(App.AssetManager.GetEbxEntry(lvlEbx.FileGuid).Name, lvlEbx);
                 }
             }
         }
@@ -1426,6 +1429,26 @@ namespace BundleEditPlugin
 
         }
 
+        /// <summary>
+        /// Removes an unlock asset from a UnlockIdTable if the game has them and its a UnlockAssetBase subtype
+        /// </summary>
+        /// <param name="AssetToRemove"></param>
+        /// <param name="SelectedBundle"></param>
+        public static void RemoveAssetFromTables(EbxAssetEntry AssetToRemove, BundleEntry SelectedBundle)
+        {
+            EbxAsset ebx = App.AssetManager.GetEbx(AssetToRemove);
+            EbxAssetEntry lvlAssetEntry = App.AssetManager.GetEbxEntry(App.AssetManager.GetSuperBundle(SelectedBundle.SuperBundleId).Name.Remove(0, 6));
+            if (hasUnlockIdTable && TypeLibrary.IsSubClassOf(AssetToRemove.Type, "UnlockAssetBase") && lvlAssetEntry != null)
+            {
+                EbxAsset lvlEbx = App.AssetManager.GetEbx(lvlAssetEntry);
+                uint unlockId = ((dynamic)ebx.RootObject).Identifier;
+                if (((dynamic)lvlEbx.RootObject).UnlockIdTable.Identifiers.Contains(unlockId))
+                {
+                    ((dynamic)lvlEbx.RootObject).UnlockIdTable.Identifiers.Remove(unlockId);
+                    App.AssetManager.ModifyEbx(App.AssetManager.GetEbxEntry(lvlEbx.FileGuid).Name, lvlEbx);
+                }
+            }
+        }
         #endregion
 
         #region --Add to Bundle Requirement Checks--
