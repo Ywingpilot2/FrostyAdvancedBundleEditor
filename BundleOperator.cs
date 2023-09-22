@@ -149,7 +149,7 @@ namespace BundleEditorPlugin
                             {
                                 //Boolean.TryParse(line.Split('=').Last().TrimStart(' '), out bool value);
                                 List<int> values = new List<int>();
-                                foreach (string bundle in line.Split('=').Last().TrimEnd(']').Split(',').ToList())
+                                foreach (string bundle in line.Split('=').Last().TrimEnd(']').Trim(' ').Split(',').ToList())
                                 {
                                     if (App.AssetManager.GetBundleId(bundle.Trim(' ')) != -1)
                                     {
@@ -167,7 +167,7 @@ namespace BundleEditorPlugin
                             {
                                 //Boolean.TryParse(line.Split('=').Last().TrimStart(' '), out bool value);
                                 List<Guid> values = new List<Guid>();
-                                foreach (string asset in line.Split('=').Last().TrimEnd(']').Split(',').ToList())
+                                foreach (string asset in line.Split('=').Last().TrimEnd(']').Trim(' ').Split(',').ToList())
                                 {
                                     switch (asset.Trim(' '))
                                     {
@@ -216,7 +216,7 @@ namespace BundleEditorPlugin
                             }
                         case "Types":
                             {
-                                opProperties.Types = line.Split('=').Last().TrimEnd(']').TrimStart(' ').Split(',').ToList();
+                                opProperties.Types = line.Split('=').Last().TrimEnd(']').Trim(' ').Split(',').ToList();
                                 break;
                             }
                         #endregion
