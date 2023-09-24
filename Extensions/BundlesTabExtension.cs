@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Controls;
 
-namespace BundleEditPlugin
+namespace AdvancedBundleEditorPlugin
 {
     public class BundlesTabExtension : TabExtension
     {

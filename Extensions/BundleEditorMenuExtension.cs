@@ -1,4 +1,4 @@
-﻿using BundleEditorPlugin;
+﻿using AdvancedBundleEditorPlugin;
 using Frosty.Core;
 using Frosty.Core.Windows;
 using FrostySdk;
@@ -11,7 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Windows.Media;
 
-namespace BundleEditPlugin
+namespace AdvancedBundleEditorPlugin
 {
     public class BundleEditorMenuExtension : MenuExtension
     {
