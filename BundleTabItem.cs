@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 
-namespace BundleEditPlugin
+namespace AdvancedBundleEditorPlugin
 {
     [TemplatePart(Name = PART_BundlesSelected, Type = typeof(TextBox))]
     [TemplatePart(Name = PART_BundlesList, Type = typeof(TextBox))]

@@ -1,5 +1,5 @@
 ﻿using AdvancedBundleEditorPlugin.Options;
-using BundleEditPlugin;
+using AdvancedBundleEditorPlugin;
 using Frosty.Core.Attributes;
 using FrostySdk;
 using System.Reflection;

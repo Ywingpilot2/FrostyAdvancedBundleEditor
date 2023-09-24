@@ -1,4 +1,4 @@
-﻿using BundleEditPlugin;
+﻿using AdvancedBundleEditorPlugin;
 using Frosty.Core;
 using Frosty.Core.Controls;
 using Frosty.Core.Windows;
@@ -319,7 +319,7 @@ namespace AdvancedBundleEditorPlugin
         }
         #endregion
 
-        #region --Bunpy(Python API reading--
+        #region --Bunpy(Python API reading)--
         private static void ReadPy(FrostyTaskWindow task)
         {
             BunpyApi.Initialize(task);

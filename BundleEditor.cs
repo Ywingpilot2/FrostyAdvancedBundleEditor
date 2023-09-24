@@ -22,7 +22,7 @@ using System.Windows.Media;
 using RootInstanceEntiresPlugin;
 using System.Security.Cryptography;
 
-namespace BundleEditPlugin
+namespace AdvancedBundleEditorPlugin
 {
     #region --Remove From Bundle extensions--
 
