@@ -451,7 +451,7 @@ namespace BundleEditPlugin
                                 //If not, check if its a mesh object
                                 else if (BundleEditors.AssetAddMeshVariationValid(selectedAsset, bentry))
                                 {
-                                    BundleEditors.AddAssetToMVDBs(selectedAsset, bentry, task);
+                                    BundleEditors.AddAssetToMvdBs(selectedAsset, bentry, task);
                                 }
                             }
 
@@ -565,7 +565,7 @@ namespace BundleEditPlugin
                                         }
                                         else if (BundleEditors.AssetAddMeshVariationValid(assetToCheck, bentry))
                                         {
-                                            BundleEditors.AddAssetToMVDBs(assetToCheck, bentry, task);
+                                            BundleEditors.AddAssetToMvdBs(assetToCheck, bentry, task);
                                         }
                                     } 
                                     else if (assetToCheck.Type == "ShaderGraph")
@@ -1016,14 +1016,15 @@ namespace BundleEditPlugin
         /// <param name="AssetToBundle"></param>
         /// <param name="SelectedBundle"></param>
         /// <param name="task">Requires a stupid task window because cache loading requires it</param>
-        public static void AddAssetToMVDBs(EbxAssetEntry AssetToBundle, BundleEntry SelectedBundle, FrostyTaskWindow task)
+        public static void AddAssetToMvdBs(EbxAssetEntry AssetToBundle, BundleEntry SelectedBundle, FrostyTaskWindow task = null)
         {
             //Make sure the MVDB cache is loaded
             if (!MeshVariationDb.IsLoaded)
             {
-                MeshVariationDb.LoadVariations(task);
+                MeshVariationDb.LoadVariations();
             }
-            task.Update("Adding to MVDB...");
+
+            task?.Update("Adding to MVDB...");
 
             EbxAsset ebxToBundle = App.AssetManager.GetEbx(AssetToBundle);
 

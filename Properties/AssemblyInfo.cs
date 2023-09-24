@@ -1,4 +1,4 @@
-﻿using BundleEditorPlugin.Options;
+﻿using AdvancedBundleEditorPlugin.Options;
 using BundleEditPlugin;
 using Frosty.Core.Attributes;
 using FrostySdk;
@@ -25,7 +25,7 @@ using System.Windows;
 
 [assembly: PluginDisplayName("Advanced Bundle Editor")]
 [assembly: PluginAuthor("GalaxyMan2015, CosmicDreams, and Y wingpilot2")]
-[assembly: PluginVersion("0.0.0.1")]
+[assembly: PluginVersion("0.0.0.2")]
 
 [assembly: RegisterMenuExtension(typeof(BundleEditorMenuExtension))]
 [assembly: RegisterMenuExtension(typeof(GenerateNetworkCache))]

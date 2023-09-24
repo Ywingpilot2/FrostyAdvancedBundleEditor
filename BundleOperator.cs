@@ -12,13 +12,19 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
+using Python;
+using Python.Runtime;
+using Frosty.Controls;
+using System.Windows;
 
-namespace BundleEditorPlugin
+namespace AdvancedBundleEditorPlugin
 {
     public class BundleOperator
     {
         public string BunOpName { get; private set; }
-        private string BunOpPath { get; set; }
+        private static string BunOpPath { get; set; }
 
         /// <summary>
         /// Initiate a new Bundle Operation
@@ -26,24 +32,30 @@ namespace BundleEditorPlugin
         public BundleOperator InitiateBundleOperation()
         {
             //create a open file dialogue so the user can select a file
-            FrostyOpenFileDialog ofd = new FrostyOpenFileDialog("Open Bundle Operation", "*.bunop|*.bunop", "BundleOperation");
-            if (ofd.ShowDialog())
+            FrostyOpenFileDialog ofd = new FrostyOpenFileDialog("Open Bundle Operation", "Bundle Operation Config (*.bunop)|*.bunop|Python Script (*.py)|*.py", "BundleOperation");
+            if (!ofd.ShowDialog()) return this;
+            BunOpName = ofd.FileName.Replace("\\", "/").Split('/').Last();
+            BunOpPath = ofd.FileName;
+            FrostyTaskWindow.Show(BunOpName, "", (task) =>
             {
-                BunOpName = ofd.FileName.Replace("\\", "/").Split('/').Last();
-                BunOpPath = ofd.FileName;
-                FrostyTaskWindow.Show(BunOpName, "", (task) =>
+                if (BunOpPath.EndsWith(".bunop"))
                 {
-                    ReadBundleOperation(task);
-                });
-                App.EditorWindow.DataExplorer.RefreshAll();
-            }
+                    ReadBunop(task);
+                }
+                else
+                {
+                    ReadPy(task);
+                }
+            });
+            App.EditorWindow.DataExplorer.RefreshAll();
             return this;
         }
 
+        #region --Bunop(pseudo xml reading)--
         /// <summary>
-        /// The brains behind the operation
+        /// Reads a .bunop file. A .bunop is a pseudo xml style configuration file for Bundle Operations.
         /// </summary>
-        private void ReadBundleOperation(FrostyTaskWindow task)
+        private void ReadBunop(FrostyTaskWindow task)
         {
             BunOpProperties opProperties = new BunOpProperties();
 
@@ -52,12 +64,13 @@ namespace BundleEditorPlugin
             while (line != null)
             {
                 //First we need to setup the line for reading
-                int commentposition = line.IndexOf("//");
-                if (commentposition != -1 && commentposition != 0)
+                // ReSharper disable once StringIndexOfIsCultureSpecific.1
+                int commentPosition = line.IndexOf("//");
+                if (commentPosition != -1 && commentPosition != 0)
                 {
-                    line = line.Remove(commentposition).TrimEnd(' ');
+                    line = line.Remove(commentPosition).TrimEnd(' ');
                 }
-                if (commentposition == 0 || string.IsNullOrEmpty(line))
+                if (commentPosition == 0 || string.IsNullOrEmpty(line))
                 {
                     line = sr.ReadLine();
                     continue;
@@ -70,49 +83,49 @@ namespace BundleEditorPlugin
                         #region --Parse Asset Bools--
                         case "AddToNetregs":
                             {
-                                Boolean.TryParse(line.Split('=').Last().TrimEnd(']').Trim(' '), out bool value);
+                                bool.TryParse(line.Split('=').Last().TrimEnd(']').Trim(' '), out bool value);
                                 opProperties.AddToNetregs = value;
                                 break;
                             }
                         case "RemoveFromNetregs":
                             {
-                                Boolean.TryParse(line.Split('=').Last().TrimEnd(']').Trim(' '), out bool value);
+                                bool.TryParse(line.Split('=').Last().TrimEnd(']').Trim(' '), out bool value);
                                 opProperties.RemoveFromNetregs = value;
                                 break;
                             }
                         case "AddToUnlockIdTables":
                             {
-                                Boolean.TryParse(line.Split('=').Last().TrimEnd(']').Trim(' '), out bool value);
+                                bool.TryParse(line.Split('=').Last().TrimEnd(']').Trim(' '), out bool value);
                                 opProperties.AddToUnlockIdTables = value;
                                 break;
                             }
                         case "RemoveFromUnlockIdTables":
                             {
-                                Boolean.TryParse(line.Split('=').Last().TrimEnd(']').Trim(' '), out bool value);
+                                bool.TryParse(line.Split('=').Last().TrimEnd(']').Trim(' '), out bool value);
                                 opProperties.RemoveFromUnlockIdTables = value;
                                 break;
                             }
                         case "AddToMeshVariations":
                             {
-                                Boolean.TryParse(line.Split('=').Last().TrimEnd(']').Trim(' '), out bool value);
+                                bool.TryParse(line.Split('=').Last().TrimEnd(']').Trim(' '), out bool value);
                                 opProperties.AddToMeshVariations = value;
                                 break;
                             }
                         case "RemoveFromMeshVariations":
                             {
-                                Boolean.TryParse(line.Split('=').Last().TrimEnd(']').Trim(' '), out bool value);
+                                bool.TryParse(line.Split('=').Last().TrimEnd(']').Trim(' '), out bool value);
                                 opProperties.RemoveFromMeshVariations = value;
                                 break;
                             }
                         case "IsRecursive":
                             {
-                                Boolean.TryParse(line.Split('=').Last().TrimEnd(']').Trim(' '), out bool value);
+                                bool.TryParse(line.Split('=').Last().TrimEnd(']').Trim(' '), out bool value);
                                 opProperties.IsRecursive = value;
                                 break;
                             }
                         case "IgnoreTypes":
                             {
-                                Boolean.TryParse(line.Split('=').Last().TrimEnd(']').Trim(' '), out bool value);
+                                bool.TryParse(line.Split('=').Last().TrimEnd(']').Trim(' '), out bool value);
                                 opProperties.IgnoreTypes = value;
                                 if (opProperties.ExclusiveTypes)
                                 {
@@ -122,7 +135,7 @@ namespace BundleEditorPlugin
                             }
                         case "ExclusiveTypes":
                             {
-                                Boolean.TryParse(line.Split('=').Last().TrimEnd(']').Trim(' '), out bool value);
+                                bool.TryParse(line.Split('=').Last().TrimEnd(']').Trim(' '), out bool value);
                                 opProperties.ExclusiveTypes = value;
                                 if (opProperties.IgnoreTypes)
                                 {
@@ -132,16 +145,22 @@ namespace BundleEditorPlugin
                             }
                         case "OnlyModified":
                             {
-                                Boolean.TryParse(line.Split('=').Last().TrimEnd(']').Trim(' '), out bool value);
+                                bool.TryParse(line.Split('=').Last().TrimEnd(']').Trim(' '), out bool value);
                                 opProperties.OnlyModified = value;
                                 break;
                             }
                         case "OnlyAdded":
                             {
-                                Boolean.TryParse(line.Split('=').Last().TrimEnd(']').Trim(' '), out bool value);
+                                bool.TryParse(line.Split('=').Last().TrimEnd(']').Trim(' '), out bool value);
                                 opProperties.OnlyAdded = value;
                                 break;
                             }
+                        case "ForceAdd":
+                        {
+                            bool.TryParse(line.Split('=').Last().TrimEnd(']').Trim(' '), out bool value);
+                            opProperties.ForceAdd = value;
+                            break;
+                        }
                         #endregion
 
                         #region --Parse Lists--
@@ -179,6 +198,8 @@ namespace BundleEditorPlugin
                                                 }
                                                 else
                                                 {
+                                                    // ReSharper disable once PossibleInvalidCastExceptionInForeachLoop
+                                                    // ^ SelectedAssets will never be invalid in this case(at least as far as I have tested)
                                                     foreach (EbxAssetEntry assetEntry in App.EditorWindow.DataExplorer.SelectedAssets)
                                                     {
                                                         values.Add(assetEntry.Guid);
@@ -242,7 +263,7 @@ namespace BundleEditorPlugin
                                 }
                                 else
                                 {
-                                    App.Logger.LogError("{0} does not have superbundles, as a result name is not needed.", ProfilesLibrary.DisplayName);
+                                    App.Logger.LogError("{0} does not have Super Bundles, as a result name is not needed.", ProfilesLibrary.DisplayName);
                                 }
                                 break;
                             }
@@ -275,11 +296,16 @@ namespace BundleEditorPlugin
                             }
                         case "GenerateBlueprints":
                             {
-                                Boolean.TryParse(line.Split('=').Last().TrimEnd(']').Trim(' '), out bool value);
+                                bool.TryParse(line.Split('=').Last().TrimEnd(']').Trim(' '), out bool value);
                                 opProperties.GenerateBlueprints = value;
                                 break;
                             }
-                            #endregion
+                        case "BlueprintType":
+                        {
+                            opProperties.BlueprintType = line.Split('=').Last().TrimEnd(']').Trim(' ');
+                            break;
+                        }
+                        #endregion
                     }
                 }
                 else
@@ -291,11 +317,25 @@ namespace BundleEditorPlugin
             }
             sr.Close(); //Close the file once we are done
         }
+        #endregion
+
+        #region --Bunpy(Python API reading--
+        private static void ReadPy(FrostyTaskWindow task)
+        {
+            BunpyApi.Initialize(task);
+            if (BunpyApi.PythonInstallValid)
+            {
+                BunpyApi.ExecutePy(BunOpPath, task );
+            }
+        }
+        #endregion
     }
 
     /// <summary>
     /// A list of properties that a BundleOperation has
     /// </summary>
+    [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
+    [SuppressMessage("ReSharper", "RedundantDefaultMemberInitializer")]
     public class BunOpProperties
     {
         #region --Asset Bools--
@@ -333,22 +373,21 @@ namespace BundleEditorPlugin
         /// <summary>
         /// Trigger an instruction of a name. The name must be without Curly brackets("{}")
         /// </summary>
-        /// <param name="InstructionName">AddAssets, RemoveAssets, CreateBundle, RemoveCreatedBundle</param>
+        /// <param name="instructionName">AddAssets, RemoveAssets, CreateBundle, RemoveCreatedBundle</param>
         /// <param name="task"></param>
-        public void TriggerInstruction(string InstructionName, FrostyTaskWindow task)
+        public void TriggerInstruction(string instructionName, FrostyTaskWindow task)
         {
-            switch (InstructionName)
+            switch (instructionName)
             {
                 #region --Asset Instructions--
                 case "AddAssets":
                     {
                         List<Guid> assetsToBundle = new List<Guid>(Assets);
                         List<Guid> bundledAssets = new List<Guid>();
-                        EbxAssetEntry currentAsset;
 
                         while (assetsToBundle.Count != 0)
                         {
-                            currentAsset = App.AssetManager.GetEbxEntry(assetsToBundle[0]);
+                            EbxAssetEntry currentAsset = App.AssetManager.GetEbxEntry(assetsToBundle[0]);
                             foreach (int bunId in Bundles)
                             {
                                 BundleEntry bundle = App.AssetManager.GetBundleEntry(bunId);
@@ -368,7 +407,7 @@ namespace BundleEditorPlugin
                                         }
                                         else if (AddToMeshVariations && BundleEditors.AssetAddMeshVariationValid(currentAsset, bundle))
                                         {
-                                            BundleEditors.AddAssetToMVDBs(currentAsset, bundle, task);
+                                            BundleEditors.AddAssetToMvdBs(currentAsset, bundle, task);
                                         }
                                         if (AddToUnlockIdTables && BundleEditors.AssetAddNetworkValid(currentAsset, bundle))
                                         {
@@ -407,11 +446,10 @@ namespace BundleEditorPlugin
                     {
                         List<Guid> assetsToBundle = new List<Guid>(Assets);
                         List<Guid> bundledAssets = new List<Guid>();
-                        EbxAssetEntry currentAsset;
 
                         while (assetsToBundle.Count != 0)
                         {
-                            currentAsset = App.AssetManager.GetEbxEntry(assetsToBundle[0]);
+                            EbxAssetEntry currentAsset = App.AssetManager.GetEbxEntry(assetsToBundle[0]);
                             foreach (int bunId in Bundles)
                             {
                                 BundleEntry bundle = App.AssetManager.GetBundleEntry(bunId);
@@ -470,11 +508,10 @@ namespace BundleEditorPlugin
                     {
                         List<Guid> assetsToBundle = new List<Guid>(Assets);
                         List<Guid> bundledAssets = new List<Guid>();
-                        EbxAssetEntry currentAsset;
 
                         while (assetsToBundle.Count != 0)
                         {
-                            currentAsset = App.AssetManager.GetEbxEntry(assetsToBundle[0]);
+                            EbxAssetEntry currentAsset = App.AssetManager.GetEbxEntry(assetsToBundle[0]);
                             if (((!OnlyModified || currentAsset.IsModified) || (!OnlyAdded || currentAsset.IsAdded)) && !bundledAssets.Contains(currentAsset.Guid))
                             {
                                 if ((IgnoreTypes && !Types.Contains(currentAsset.Type)) || (ExclusiveTypes && Types.Contains(currentAsset.Type)) || (!IgnoreTypes && !ExclusiveTypes))
@@ -623,7 +660,7 @@ namespace BundleEditorPlugin
 
                 default:
                     {
-                        App.Logger.LogError("{0} is not a valid instruction", InstructionName);
+                        App.Logger.LogError("{0} is not a valid instruction", instructionName);
                         break;
                     }
             }
@@ -667,4 +704,587 @@ namespace BundleEditorPlugin
             #endregion
         }
     }
+
+    #region --Python API--
+
+    [SuppressMessage("ReSharper", "ClassNeverInstantiated.Global")]
+    public static class BunpyApi
+    {
+        private static string pythonDll = ""; //Path gets set later down the line
+        public static bool PythonInstallValid;
+
+        #region --Executing Python Code(C# implementation)--
+        /// <summary>
+        /// Initiate the BunpyApi. This involves tracking down the Python 3.8 installation, then finding/installing Pythonnet 2.5
+        /// </summary>
+        /// <param name="task"></param>
+        public static void Initialize(FrostyTaskWindow task)
+        {
+            task.Update("Determining Python 3.8 installation...");
+            if (File.Exists($@"C:\Users\{Environment.UserName}\AppData\Local\Programs\Python\Python38\python38.dll"))
+            {
+                pythonDll = $@"C:\Users\{Environment.UserName}\AppData\Local\Programs\Python\Python38\python38.dll";
+                Config.Add("BunpyLocation", pythonDll);
+                task.Update("Python.dll found!");
+
+                Environment.SetEnvironmentVariable("PYTHONNET_PYDLL", pythonDll);
+                PythonEngine.Initialize();
+            }
+            else if (File.Exists(@Config.Get("BunpyLocation", "") + @"\python38.dll")) //Get the path from the user
+            {
+                pythonDll = @Config.Get("BunpyLocation", "") + @"\python38.dll";
+                task.Update("Python.dll found!");
+
+                Environment.SetEnvironmentVariable("PYTHONNET_PYDLL", pythonDll);
+                PythonEngine.Initialize();
+            }
+            else
+            {
+                Process.Start("https://www.python.org/downloads/release/python-380/");
+                App.Logger.Log("Failed to find python38.dll! Please either install Python 3.8.x, or if its already installed, set the 'Python 3.8 location' setting in Bundle Editor Options.");
+            }
+
+            task.Update("Determining Pythonnet status...");
+            if (File.Exists($@"C:\Users\{Environment.UserName}\AppData\Local\Programs\Python\Python38\Lib\site-packages\clr.pyd"))
+            {
+                task.Update("Pythonnet valid!");
+                PythonInstallValid = true;
+            }
+            else if (File.Exists(@Config.Get("BunpyLocation", "") + @"\Lib\site-packages\clr.pyd")) //Get the path from the user
+            {
+                task.Update("Pythonnet valid!");
+                PythonInstallValid = true;
+            }
+            else
+            {
+                task.Update("Invalid Pythonnet installation...");
+                MessageBoxResult result = FrostyMessageBox.Show("Pythonnet's installation seems to be invalid or I have been unable to find it. Would you like me to install it for you?", "Bundle Operator", MessageBoxButton.YesNo);
+                if (result == MessageBoxResult.Yes)
+                {
+                    Process.Start("CMD.exe", "/C py -3.8 -m pip uninstall pythonnet");
+                    Process cmd = Process.Start("CMD.exe", "/C py -3.8 -m pip install pythonnet==2.5.0");
+                    if (cmd != null && cmd.HasExited && File.Exists($@"C:\Users\{Environment.UserName}\AppData\Local\Programs\Python\Python38\Lib\site-packages\clr.pyd"))
+                    {
+                        task.Update("Pythonnet valid!");
+                        PythonInstallValid = true;
+                    }
+                    else if (File.Exists(@Config.Get("BunpyLocation", "") + @"\Lib\site-packages\clr.pyd"))
+                    {
+                        task.Update("Pythonnet valid!");
+                        PythonInstallValid = true;
+                    }
+                    else
+                    {
+                        App.Logger.Log("Error installing/finding Pythonnet");
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// This will process then run a set of Python code from a .py file
+        /// </summary>
+        /// <param name="path"></param>
+        /// <param name="task"></param>
+        public static void ExecutePy(string path, FrostyTaskWindow task)
+        {
+            //First we need to parse the python file
+            task.Update("Parsing Python...");
+            StreamReader sr = new StreamReader(path);
+            string line = @sr.ReadLine();
+            string code = ""; //Empty for now, this will be filled with the code we need PythonEngine to execute
+
+            while (line != null)
+            {
+                code += "\n" + line; //By default we just directly pass the new line in
+                line = @sr.ReadLine();
+            }
+            sr.Close();
+            
+            task.Update("Executing python...");
+            using (Py.GIL())
+            {
+                string processedCode = ProcessCode(code);
+                PythonEngine.Exec(ProcessCode(@processedCode));
+            }
+        }
+
+        /// <summary>
+        /// This processes a line of code
+        /// </summary>
+        /// <param name="code"></param>
+        /// <returns></returns>
+        private static string ProcessCode(string code)
+        {
+            string processedCode = code.Replace("import Frostpy", "import clr\nclr.AddReference(\"AdvancedBundleEditorPlugin\")\nimport AdvancedBundleEditorPlugin").Replace("from Frostpy import BunpyApi", "import clr\nclr.AddReference(\"AdvancedBundleEditorPlugin\")\nfrom AdvancedBundleEditorPlugin import BunpyApi");
+            return processedCode.Replace("Frostpy.BunpyApi.", "AdvancedBundleEditorPlugin.BunpyApi.");
+        }
+        #endregion
+
+        #region --API(Python implementation)--
+
+        #region --Classes--
+        /// <summary>
+        /// Dummy class for an asset that Bunpy can interact with. Keep it nice and simple as to not upset pythonnet too much
+        /// </summary>
+        [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
+        [SuppressMessage("ReSharper", "UnusedAutoPropertyAccessor.Global")]
+        public class Asset
+        {
+            public string FilePath { get; set; }
+
+            public bool IsModified
+            {
+                get
+                {
+                    //First we check if our asset is valid or not
+                    if (App.AssetManager.GetEbxEntry(FilePath) == null)
+                    {
+                        App.Logger.LogError("{0} is not a valid asset. Did you forget to set the FilePath?", FilePath);
+                        return false;
+                    }
+                    EbxAssetEntry assetEntry = App.AssetManager.GetEbxEntry(FilePath);
+                    return assetEntry.IsModified;
+                }
+            }
+
+            public bool IsAdded
+            {
+                get
+                {
+                    //First we check if our asset is valid or not
+                    if (App.AssetManager.GetEbxEntry(FilePath) == null)
+                    {
+                        App.Logger.LogError("{0} is not a valid asset. Did you forget to set the FilePath?", FilePath);
+                        return false;
+                    }
+                    EbxAssetEntry assetEntry = App.AssetManager.GetEbxEntry(FilePath);
+                    return assetEntry.IsAdded;
+                }
+            }
+
+            public string Type
+            {
+                get
+                {
+                    //First we check if our asset is valid or not
+                    if (App.AssetManager.GetEbxEntry(FilePath) == null)
+                    {
+                        App.Logger.LogError("{0} is not a valid asset. Did you forget to set the FilePath?", FilePath);
+                        return "Invalid";
+                    }
+                    EbxAssetEntry assetEntry = App.AssetManager.GetEbxEntry(FilePath);
+                    return assetEntry.Type;
+                }
+            }
+
+            public string GetFilename()
+            {
+                //First we check if our asset is valid or not
+                if (App.AssetManager.GetEbxEntry(FilePath) != null) return FilePath.Split('/').Last();
+                App.Logger.LogError("{0} is not a valid asset. Did you forget to set the FilePath?", FilePath);
+                return FilePath;
+            }
+
+            public List<Asset> GetReferences()
+            {
+                //First we check if our asset is valid or not
+                if (App.AssetManager.GetEbxEntry(FilePath) == null)
+                {
+                    App.Logger.LogError("{0} is not a valid asset. Did you forget to set the FilePath?", FilePath);
+                    return new List<Asset>();
+                }
+                EbxAssetEntry assetEntry = App.AssetManager.GetEbxEntry(FilePath);
+                List<Asset> assets = new List<Asset>();
+                foreach (Guid reference in assetEntry.EnumerateDependencies())
+                {
+                    EbxAssetEntry referencedAsset = App.AssetManager.GetEbxEntry(reference);
+                    assets.Add(ParseAssetEntry(referencedAsset));
+                }
+
+                return assets;
+            }
+
+            public static Asset ParseAssetEntry(EbxAssetEntry assetEntry)
+            {
+                return new Asset() { FilePath = assetEntry.Name };
+            }
+        }
+
+        /// <summary>
+        /// Dummy class for a bundle that Bunpy can interact with. Keep it nice and simple as to not upset pythonnet too much
+        /// </summary>
+        [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
+        [SuppressMessage("ReSharper", "UnusedAutoPropertyAccessor.Global")]
+        public class Bundle
+        {
+            public string Name { get; set; }
+
+            public string GetBundleType()
+            {
+                if (App.AssetManager.GetBundleId(Name) == -1)
+                {
+                    App.Logger.LogError("{0} is not a valid bundle. Did you forget to set the Name?", Name);
+                    return "Invalid";
+                }
+                BundleEntry bundle = App.AssetManager.GetBundleEntry(App.AssetManager.GetBundleId(Name));
+                switch(bundle.Type)
+                {
+                    case BundleType.SubLevel:
+                        {
+                            return "Sublevel";
+                        }
+                    case BundleType.BlueprintBundle:
+                        {
+                            return "Blueprint";
+                        }
+                    case BundleType.SharedBundle:
+                        {
+                            return "Shared";
+                        }
+                    case BundleType.None:
+                    default:
+                        {
+                            return "Invalid";
+                        }
+                }
+            }
+
+            public string GetSuperBundle()
+            {
+                if (App.AssetManager.GetBundleId(Name) == -1)
+                {
+                    App.Logger.LogError("{0} is not a valid bundle. Did you forget to set the Name?", Name);
+                    return "<none>";
+                }
+                BundleEntry bundle = App.AssetManager.GetBundleEntry(App.AssetManager.GetBundleId(Name));
+                return App.AssetManager.GetSuperBundle(bundle.SuperBundleId).Name;
+            }
+        }
+        #endregion
+
+        #region --Methods--
+        [SuppressMessage("ReSharper", "InconsistentNaming")]
+        public static void AddAsset(Asset AssetToAdd, Bundle SelectedBundle, bool ForceAdd = false, bool Recursive = false, bool AddToNetregs = false, bool AddToMeshVariations = false)
+        {
+            //First we check if our asset is valid or not
+            if (App.AssetManager.GetEbxEntry(AssetToAdd.FilePath) == null)
+            {
+                App.Logger.LogError("{0} is not a valid asset. Did you forget to set the FilePath?", AssetToAdd.FilePath);
+                return;
+            }
+
+            //Do the same for our bundle
+            if (App.AssetManager.GetBundleId(SelectedBundle.Name) == -1)
+            {
+                App.Logger.LogError("{0} is not a valid bundle. Did you forget to set the Name?", SelectedBundle.Name);
+                return;
+            }
+            
+            List<Guid> checkedAssets = new List<Guid>();
+            List<Guid> assets = new List<Guid>() { App.AssetManager.GetEbxEntry(AssetToAdd.FilePath).Guid };
+            while (assets.Count != 0)
+            {
+                if (checkedAssets.Contains(assets[0]))
+                {
+                    assets.Remove(assets[0]);
+                    continue;
+                }
+                EbxAssetEntry assetToCheck = App.AssetManager.GetEbxEntry(assets[0]);
+                BundleEntry bundle = App.AssetManager.GetBundleEntry(App.AssetManager.GetBundleId(SelectedBundle.Name));
+                
+                if (Recursive)
+                {
+                    assets.AddRange(assetToCheck.EnumerateDependencies());
+                }
+                
+                if (!ForceAdd && !BundleEditors.AssetRecAddValid(assetToCheck, bundle))
+                {
+                    assets.Remove(assetToCheck.Guid);
+                    checkedAssets.Add(assetToCheck.Guid);
+                    continue;
+                }
+                BundleEditors.AddAssetToBundle(assetToCheck, bundle);
+
+                if (AddToNetregs && BundleEditors.AssetAddNetworkValid(assetToCheck, bundle))
+                {
+                    BundleEditors.AddAssetToNetRegs(assetToCheck, bundle);
+                }
+                else if (AddToMeshVariations && BundleEditors.AssetAddMeshVariationValid(assetToCheck, bundle))
+                {
+                    BundleEditors.AddAssetToMvdBs(assetToCheck, bundle);
+                }
+
+                assets.Remove(assetToCheck.Guid);
+                checkedAssets.Add(assetToCheck.Guid);
+            }
+        }
+        
+        [SuppressMessage("ReSharper", "InconsistentNaming")] //I know this code is dogshit and the names are wrong, these are just copy pasted from bunop integration
+        public static void RemoveAsset(Asset Asset, Bundle SelectedBundle, bool ForceAdd = false, bool Recursive = false, bool AddToNetregs = false, bool AddToMeshVariations = false)
+        {
+            //First we check if our asset is valid or not
+            if (App.AssetManager.GetEbxEntry(Asset.FilePath) == null)
+            {
+                App.Logger.LogError("{0} is not a valid asset. Did you forget to set the FilePath?", Asset.FilePath);
+                return;
+            }
+
+            //Do the same for our bundle
+            if (App.AssetManager.GetBundleId(SelectedBundle.Name) == -1)
+            {
+                App.Logger.LogError("{0} is not a valid bundle. Did you forget to set the Name?", SelectedBundle.Name);
+                return;
+            }
+            
+            List<Guid> checkedAssets = new List<Guid>();
+            List<Guid> assets = new List<Guid>() { App.AssetManager.GetEbxEntry(Asset.FilePath).Guid };
+            while (assets.Count != 0)
+            {
+                if (checkedAssets.Contains(assets[0]))
+                {
+                    assets.Remove(assets[0]);
+                    continue;
+                }
+                EbxAssetEntry assetToCheck = App.AssetManager.GetEbxEntry(assets[0]);
+                BundleEntry bundle = App.AssetManager.GetBundleEntry(App.AssetManager.GetBundleId(SelectedBundle.Name));
+                
+                if (Recursive)
+                {
+                    assets.AddRange(assetToCheck.EnumerateDependencies());
+                }
+                
+                if (!ForceAdd && !BundleEditors.AssetRecRemValid(assetToCheck, bundle))
+                {
+                    assets.Remove(assetToCheck.Guid);
+                    checkedAssets.Add(assetToCheck.Guid);
+                    continue;
+                }
+                BundleEditors.RemoveAssetFromBundle(assetToCheck, bundle);
+
+                if (AddToNetregs && BundleEditors.AssetRemNetworkValid(assetToCheck, bundle))
+                {
+                    BundleEditors.RemoveAssetFromNetRegs(assetToCheck, bundle);
+                }
+                else if (AddToMeshVariations && BundleEditors.AssetRemMeshVariationValid(assetToCheck, bundle))
+                {
+                    BundleEditors.RemoveAssetFromMeshVariations(assetToCheck, bundle);
+                }
+
+                assets.Remove(assetToCheck.Guid);
+                checkedAssets.Add(assetToCheck.Guid);
+            }
+        }
+        
+        [SuppressMessage("ReSharper", "InconsistentNaming")] //I know this code is dogshit and the names are wrong, these are just copy pasted from bunop integration
+        public static void ClearAsset(Asset Asset, bool Recursive = false, bool AddToNetregs = false, bool AddToMeshVariations = false)
+        {
+            //First we check if our asset is valid or not
+            if (App.AssetManager.GetEbxEntry(Asset.FilePath) == null)
+            {
+                App.Logger.LogError("{0} is not a valid asset. Did you forget to set the FilePath?", Asset.FilePath);
+                return;
+            }
+
+            List<Guid> checkedAssets = new List<Guid>();
+            List<Guid> assets = new List<Guid>() { App.AssetManager.GetEbxEntry(Asset.FilePath).Guid };
+            while (assets.Count != 0)
+            {
+                if (checkedAssets.Contains(assets[0]))
+                {
+                    assets.Remove(assets[0]);
+                    continue;
+                }
+                EbxAssetEntry assetToCheck = App.AssetManager.GetEbxEntry(assets[0]);
+                while (assetToCheck.AddedBundles.Count != 0)
+                {
+                    BundleEntry bundle = App.AssetManager.GetBundleEntry(assetToCheck.AddedBundles[0]);
+                    BundleEditors.RemoveAssetFromBundle(assetToCheck, bundle);
+
+                    if (AddToNetregs && BundleEditors.AssetRemNetworkValid(assetToCheck, bundle))
+                    {
+                        BundleEditors.RemoveAssetFromNetRegs(assetToCheck, bundle);
+                    }
+                    else if (AddToMeshVariations && BundleEditors.AssetRemMeshVariationValid(assetToCheck, bundle))
+                    {
+                        BundleEditors.RemoveAssetFromMeshVariations(assetToCheck, bundle);
+                    }
+   
+                }
+                
+                if (Recursive)
+                {
+                    assets.AddRange(assetToCheck.EnumerateDependencies());
+                }
+
+                assets.Remove(assetToCheck.Guid);
+                checkedAssets.Add(assetToCheck.Guid);
+            }
+        }
+
+        [SuppressMessage("ReSharper", "InconsistentNaming")]
+        public static void AddBundle(string BundlePath, string SuperBundleName, string BundleType = "Shared",
+            bool GenerateBlueprints = true, string BlueprintType = "BlueprintBundle")
+        {
+            if (string.IsNullOrEmpty(BundlePath)) return;
+            
+            switch (BundleType)
+            {
+                case "Shared":
+                {
+                    BundleEntry newBundle = App.AssetManager.AddBundle("win32/" + BundlePath.ToLower(), FrostySdk.Managers.BundleType.SharedBundle, App.AssetManager.GetSuperBundleId(SuperBundleName));
+                    if (!GenerateBlueprints) return;
+                    for (int i = 0; i != 2; i++)
+                    {
+                        EbxAsset blueprint;
+                        string name;
+                        if (i == 1)
+                        {
+                            blueprint = new EbxAsset(TypeLibrary.CreateObject("MeshVariationDatabase"));
+                            name = BundlePath + "/MeshVariationDb_Win32";
+                        }
+                        else
+                        {
+                            blueprint = new EbxAsset(TypeLibrary.CreateObject("NetworkRegistryAsset"));
+                            name = BundlePath.Replace(BundlePath.Split().Last(), "") + BundlePath.Split().Last().ToLower() + "_networkregistry_Win32";
+                        }
+                        blueprint.SetFileGuid(Guid.NewGuid());
+
+                        dynamic obj = blueprint.RootObject;
+                        obj.Name = name;
+
+                        AssetClassGuid guid = new AssetClassGuid(Utils.GenerateDeterministicGuid(blueprint.Objects, (Type)obj.GetType(), blueprint.FileGuid), -1);
+                        obj.SetInstanceGuid(guid);
+
+                        EbxAssetEntry newEntry = App.AssetManager.AddEbx(name, blueprint);
+
+                        newEntry.AddedBundles.Add(App.AssetManager.GetBundleId(newBundle));
+                        newEntry.ModifiedEntry.DependentAssets.AddRange(blueprint.Dependencies);
+                    }
+                    break;
+                }
+                case "Sublevel":
+                {
+                    BundleEntry newBundle = App.AssetManager.AddBundle("win32/" + BundlePath.ToLower(), FrostySdk.Managers.BundleType.SubLevel, App.AssetManager.GetSuperBundleId(SuperBundleName));
+                    if (!GenerateBlueprints) return;
+                    
+                    EbxAsset sublevel = new EbxAsset(TypeLibrary.CreateObject("SubWorldData"));
+                    sublevel.SetFileGuid(Guid.NewGuid());
+
+                    dynamic sublevelobj = sublevel.RootObject;
+                    sublevelobj.Name = BundlePath;
+
+                    AssetClassGuid sublevelguid = new AssetClassGuid(Utils.GenerateDeterministicGuid(sublevel.Objects, (Type)sublevelobj.GetType(), sublevel.FileGuid), -1);
+                    sublevelobj.SetInstanceGuid(sublevelguid);
+
+                    EbxAssetEntry newSubLevelEntry = App.AssetManager.AddEbx(BundlePath, sublevel);
+
+                    newSubLevelEntry.AddedBundles.Add(App.AssetManager.GetBundleId(newBundle));
+                    newSubLevelEntry.ModifiedEntry.DependentAssets.AddRange(sublevel.Dependencies);
+                    newBundle.Blueprint = newSubLevelEntry;
+                    
+                    for (int i = 0; i != 2; i++)
+                    {
+                        EbxAsset blueprint;
+                        string name;
+                        if (i == 1)
+                        {
+                            blueprint = new EbxAsset(TypeLibrary.CreateObject("MeshVariationDatabase"));
+                            name = BundlePath + "/MeshVariationDb_Win32";
+                        }
+                        else
+                        {
+                            blueprint = new EbxAsset(TypeLibrary.CreateObject("NetworkRegistryAsset"));
+                            name = BundlePath.Replace(BundlePath.Split().Last(), "") + BundlePath.Split().Last().ToLower() + "_networkregistry_Win32";
+                        }
+                        blueprint.SetFileGuid(Guid.NewGuid());
+
+                        dynamic obj = blueprint.RootObject;
+                        obj.Name = name;
+
+                        AssetClassGuid guid = new AssetClassGuid(Utils.GenerateDeterministicGuid(blueprint.Objects, (Type)obj.GetType(), blueprint.FileGuid), -1);
+                        obj.SetInstanceGuid(guid);
+
+                        EbxAssetEntry newEntry = App.AssetManager.AddEbx(name, blueprint);
+
+                        newEntry.AddedBundles.Add(App.AssetManager.GetBundleId(newBundle));
+                        newEntry.ModifiedEntry.DependentAssets.AddRange(blueprint.Dependencies);
+                    }
+                    break;
+                }
+                case "Blueprint":
+                {
+                    BundleEntry newBundle = App.AssetManager.AddBundle("win32/" + BundlePath.ToLower(), FrostySdk.Managers.BundleType.SubLevel, App.AssetManager.GetSuperBundleId(SuperBundleName));
+                    if (!GenerateBlueprints) return;
+                    
+                    EbxAsset bpb = new EbxAsset(TypeLibrary.CreateObject(BlueprintType));
+                    bpb.SetFileGuid(Guid.NewGuid());
+
+                    dynamic bpbRootObject = bpb.RootObject;
+                    bpbRootObject.Name = BundlePath;
+
+                    AssetClassGuid bpbguid = new AssetClassGuid(Utils.GenerateDeterministicGuid(bpb.Objects, (Type)bpbRootObject.GetType(), bpb.FileGuid), -1);
+                    bpbRootObject.SetInstanceGuid(bpbguid);
+
+                    EbxAssetEntry newSubLevelEntry = App.AssetManager.AddEbx(BundlePath, bpb);
+
+                    newSubLevelEntry.AddedBundles.Add(App.AssetManager.GetBundleId(newBundle));
+                    newSubLevelEntry.ModifiedEntry.DependentAssets.AddRange(bpb.Dependencies);
+                    newBundle.Blueprint = newSubLevelEntry;
+                    
+                    for (int i = 0; i != 2; i++)
+                    {
+                        EbxAsset blueprint;
+                        string name;
+                        if (i == 1)
+                        {
+                            blueprint = new EbxAsset(TypeLibrary.CreateObject("MeshVariationDatabase"));
+                            name = BundlePath + "/MeshVariationDb_Win32";
+                        }
+                        else
+                        {
+                            blueprint = new EbxAsset(TypeLibrary.CreateObject("NetworkRegistryAsset"));
+                            name = BundlePath.Replace(BundlePath.Split().Last(), "") + BundlePath.Split().Last().ToLower() + "_networkregistry_Win32";
+                        }
+                        blueprint.SetFileGuid(Guid.NewGuid());
+
+                        dynamic obj = blueprint.RootObject;
+                        obj.Name = name;
+
+                        AssetClassGuid guid = new AssetClassGuid(Utils.GenerateDeterministicGuid(blueprint.Objects, (Type)obj.GetType(), blueprint.FileGuid), -1);
+                        obj.SetInstanceGuid(guid);
+
+                        EbxAssetEntry newEntry = App.AssetManager.AddEbx(name, blueprint);
+
+                        newEntry.AddedBundles.Add(App.AssetManager.GetBundleId(newBundle));
+                        newEntry.ModifiedEntry.DependentAssets.AddRange(blueprint.Dependencies);
+                    }
+                    break;
+                }                
+            }
+        }
+
+        public static void Log(string message)
+        {
+            App.Logger.Log(message);
+        }
+
+        public static List<Asset> GetAllOfType(string type, bool onlyModified = false, bool onlyAdded = false)
+        {
+            List<Asset> assets = new List<Asset>();
+            foreach (EbxAssetEntry assetEntry in App.AssetManager.EnumerateEbx(type, onlyModified))
+            {
+                if (onlyAdded && !assetEntry.IsAdded) continue;
+                assets.Add(Asset.ParseAssetEntry(assetEntry));
+            }
+
+            return assets;
+        }
+        #endregion
+        
+        #endregion
+
+    }
+
+    #endregion
 }

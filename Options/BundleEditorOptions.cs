@@ -10,7 +10,7 @@ using FrostySdk.Attributes;
 using FrostySdk.Ebx;
 using FrostySdk.IO;
 
-namespace BundleEditorPlugin.Options
+namespace AdvancedBundleEditorPlugin.Options
 {
     [EbxClassMeta(EbxFieldType.Struct)]
     public class BunStringOpt
@@ -90,15 +90,27 @@ namespace BundleEditorPlugin.Options
         [EbxFieldMeta(EbxFieldType.Boolean)]
         public bool CacheNetworkedTypes { get; set; }
 
+        [Category("Bunpy")]
+        [DisplayName("Python 3.8 location")]
+        [Description("Where Python 3.8 is located. The Bundle Operator should be able to automatically find this, so unless asked to there should be no need to set this.\nThis should be set as the folder with the python.exe with it, as well as Python38.dll")]
+        [EbxFieldMeta(EbxFieldType.String)]
+        public string BunpyLocation { get; set; }
+
+        [Category("Bunpy")]
+        [DisplayName("PythonNet 2.5.0 location")]
+        [Description("Where PythonNet 2.5.0 is located. If this is not already installed, and the Bundle Operator has the correct Python 3.8 path, then this should be automatically installed.")]
+        [EbxFieldMeta(EbxFieldType.String)]
+        public string PynetLocation { get; set; }
+
         public override void Load()
         {
-            List<string> ExcludedBundlesNames = Config.Get("ExcludedBundlesv2", new List<string>());
+            List<string> ExcludedBundlesNames = Config.Get("ExcludedBundlesv2", new List<string>(), ConfigScope.Game);
             foreach (string str in ExcludedBundlesNames)
             {
                 ExcludedBundles.Add(new BunStringOpt() { Value = str });
             }
 
-            ExcludedAssets = Config.Get("ExcludedAssetsv2", new List<BunStringOpt>());
+            ExcludedAssets = Config.Get("ExcludedAssetsv2", new List<BunStringOpt>(), ConfigScope.Game);
             AllowRootNetreg = Config.Get("AllowRootNetreg", false);
             EditSharedBundled = Config.Get("ModifySharedBundled", false);
             EditSharedLevelBundled = Config.Get("ModifyLevelBundled", false);
@@ -107,6 +119,8 @@ namespace BundleEditorPlugin.Options
             CacheSubworldBundles = Config.Get("CacheSubworldBundles", true);
             CacheSharedBundles = Config.Get("CacheSharedBundles", true);
             CacheNetworkedTypes = Config.Get("CacheNetworkedTypes", true);
+            BunpyLocation = Config.Get("BunpyLocation", "");
+            PynetLocation = Config.Get("PynetLocation", "");
         }
         public override void Save()
         {
@@ -115,8 +129,8 @@ namespace BundleEditorPlugin.Options
             {
                 list.Add(str.Value);
             }
-            Config.Add("ExcludedBundlesv2", list);
-            Config.Add("ExcludedAssetsv2", ExcludedAssets);
+            Config.Add("ExcludedBundlesv2", list, ConfigScope.Game);
+            Config.Add("ExcludedAssetsv2", ExcludedAssets, ConfigScope.Game);
             Config.Add("AllowRootNetreg", AllowRootNetreg);
             Config.Add("ModifySharedBundled", EditSharedBundled);
             Config.Add("ModifyLevelBundled", EditSharedLevelBundled);
@@ -125,6 +139,8 @@ namespace BundleEditorPlugin.Options
             Config.Add("CacheSubworldBundles", CacheSubworldBundles);
             Config.Add("CacheSharedBundles", CacheSharedBundles);
             Config.Add("CacheNetworkedTypes", CacheNetworkedTypes);
+            Config.Add("BunpyLocation", BunpyLocation);
+            Config.Add("PynetLocation", PynetLocation);
         }
 
 

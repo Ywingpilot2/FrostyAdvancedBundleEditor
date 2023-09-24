@@ -38,6 +38,9 @@
   
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
     <Exec Command="xcopy /Y $(TargetPath) $(SolutionDir)$(OutDir)Plugins\" />
+    <Copy SourceFiles="PyApi\Frostpy.py" DestinationFolder="$(SolutionDir)$(OutDir)BundleOperations\" />
+    <Copy Condition="'$(Configuration)|$(Platform)' == 'Developer - Debug|x64'" SourceFiles="bin\Developer\Debug\Python.Runtime.dll" DestinationFolder="$(SolutionDir)$(OutDir)Plugins\" />
+    <Copy Condition="'$(Configuration)|$(Platform)' == 'Release - Final|x64'" SourceFiles="bin\Release\Final\Python.Runtime.dll" DestinationFolder="$(SolutionDir)$(OutDir)Plugins\" />
   </Target>
   
   <ItemGroup>
@@ -59,4 +62,10 @@
   <ItemGroup>
     <Resource Include="Images\BundleEdit.png" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="pythonnet" Version="3.0.2" />
+  </ItemGroup>
+  <PropertyGroup>
+    <EmitLegacyAssetsFileItems>True</EmitLegacyAssetsFileItems>
+  </PropertyGroup>
 </Project>
