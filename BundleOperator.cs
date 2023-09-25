@@ -831,7 +831,11 @@ namespace AdvancedBundleEditorPlugin
         [SuppressMessage("ReSharper", "UnusedAutoPropertyAccessor.Global")]
         public class Asset
         {
+            #region Properties
+
             public string FilePath { get; set; }
+
+            public string Filename => FilePath.Split('/').Last();
 
             public bool IsModified
             {
@@ -878,13 +882,59 @@ namespace AdvancedBundleEditorPlugin
                 }
             }
 
-            public string GetFilename()
+            public List<Bundle> OriginalBundles
             {
-                //First we check if our asset is valid or not
-                if (App.AssetManager.GetEbxEntry(FilePath) != null) return FilePath.Split('/').Last();
-                App.Logger.LogError("{0} is not a valid asset. Did you forget to set the FilePath?", FilePath);
-                return FilePath;
+                get
+                {
+                    if (App.AssetManager.GetEbxEntry(FilePath) == null)
+                    {
+                        App.Logger.Log("{0} is not a valid asset. Did you forget to set the FilePath?", FilePath);
+                        return new List<Bundle>();
+                    }
+                    EbxAssetEntry assetEntry = App.AssetManager.GetEbxEntry(FilePath);
+                    List<Bundle> bundles = new List<Bundle>();
+                    foreach (int bunId in assetEntry.Bundles)
+                    {
+                        bundles.Add(Bundle.ParseBundle(App.AssetManager.GetBundleEntry(bunId)));
+                    }
+
+                    return bundles;
+                }
             }
+            
+            public List<Bundle> AddedBundles
+            {
+                get
+                {
+                    if (App.AssetManager.GetEbxEntry(FilePath) == null)
+                    {
+                        App.Logger.Log("{0} is not a valid asset. Did you forget to set the FilePath?", FilePath);
+                        return new List<Bundle>();
+                    }
+                    EbxAssetEntry assetEntry = App.AssetManager.GetEbxEntry(FilePath);
+                    List<Bundle> bundles = new List<Bundle>();
+                    foreach (int bunId in assetEntry.AddedBundles)
+                    {
+                        bundles.Add(Bundle.ParseBundle(App.AssetManager.GetBundleEntry(bunId)));
+                    }
+
+                    return bundles;
+                }
+            }
+
+            public List<Bundle> AllBundles
+            {
+                get
+                {
+                    List<Bundle> bundles = new List<Bundle>(OriginalBundles);
+                    bundles.AddRange(AddedBundles);
+                    return bundles;
+                }
+            }
+
+            #endregion
+
+            #region Methods
 
             public List<Asset> GetReferences()
             {
@@ -905,9 +955,16 @@ namespace AdvancedBundleEditorPlugin
                 return assets;
             }
 
-            public static Asset ParseAssetEntry(EbxAssetEntry assetEntry)
+            internal static Asset ParseAssetEntry(EbxAssetEntry assetEntry)
             {
-                return new Asset() { FilePath = assetEntry.Name };
+                return new Asset(assetEntry.Name);
+            }
+
+            #endregion
+
+            public Asset(string filePath)
+            {
+                FilePath = filePath;
             }
         }
 
@@ -919,6 +976,12 @@ namespace AdvancedBundleEditorPlugin
         public class Bundle
         {
             public string Name { get; set; }
+
+            public Asset GetBlueprint()
+            {
+                BundleEntry bundleEntry = App.AssetManager.GetBundleEntry(App.AssetManager.GetBundleId(Name));
+                return Asset.ParseAssetEntry(bundleEntry.Blueprint);
+            }
 
             public string GetBundleType()
             {
@@ -959,6 +1022,16 @@ namespace AdvancedBundleEditorPlugin
                 }
                 BundleEntry bundle = App.AssetManager.GetBundleEntry(App.AssetManager.GetBundleId(Name));
                 return App.AssetManager.GetSuperBundle(bundle.SuperBundleId).Name;
+            }
+
+            internal static Bundle ParseBundle(BundleEntry bundleEntry)
+            {
+                return new Bundle(bundleEntry.Name);
+            }
+
+            public Bundle(string name)
+            {
+                Name = name;
             }
         }
         #endregion
