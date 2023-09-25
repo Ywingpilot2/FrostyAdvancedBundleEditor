@@ -38,7 +38,7 @@
   
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
     <Exec Command="xcopy /Y $(TargetPath) $(SolutionDir)$(OutDir)Plugins\" />
-    <Copy SourceFiles="PyApi\Frostpy.py" DestinationFolder="$(SolutionDir)$(OutDir)BundleOperations\" />
+    <Exec Command="xcopy /Y $(ProjectDir)PyApi\ $(SolutionDir)$(OutDir)BundleOperations\" />
     <Copy Condition="'$(Configuration)|$(Platform)' == 'Developer - Debug|x64'" SourceFiles="bin\Developer\Debug\Python.Runtime.dll" DestinationFolder="$(SolutionDir)$(OutDir)Plugins\" />
     <Copy Condition="'$(Configuration)|$(Platform)' == 'Release - Final|x64'" SourceFiles="bin\Release\Final\Python.Runtime.dll" DestinationFolder="$(SolutionDir)$(OutDir)Plugins\" />
   </Target>

@@ -1,5 +1,4 @@
-﻿using AdvancedBundleEditorPlugin;
-using Frosty.Core;
+﻿using Frosty.Core;
 using Frosty.Core.Controls;
 using Frosty.Core.Windows;
 using FrostySdk;
@@ -10,11 +9,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using Python;
 using Python.Runtime;
 using Frosty.Controls;
 using System.Windows;
@@ -1337,8 +1333,10 @@ namespace AdvancedBundleEditorPlugin
             }
         }
 
-        public static void Log(string message)
+        public static void Log(object stringToLog)
         {
+            if (stringToLog.GetType() != typeof(string)) return; //Check if object isn't a string(incase someone passes an object)
+            string message = stringToLog as string;
             App.Logger.Log(message);
         }
 
