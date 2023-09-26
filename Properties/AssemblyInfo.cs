@@ -31,7 +31,6 @@ using System.Windows;
 [assembly: RegisterMenuExtension(typeof(GenerateNetworkCache))]
 [assembly: RegisterMenuExtension(typeof(GenerateMvdbBundleCache))]
 [assembly: RegisterMenuExtension(typeof(OpenBundleOperation))]
-[assembly: RegisterTabExtension(typeof(BundlesTabExtension))]
 [assembly: RegisterTabExtension(typeof(SuperBundlesTabExtension))]
 [assembly: RegisterOptionsExtension(typeof(BundleEditorOptions), Frosty.Core.PluginManagerType.Both)]
 [assembly: RegisterDataExplorerContextMenu(typeof(IgnoreAssetContextMenuItem))]

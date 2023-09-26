@@ -65,22 +65,26 @@ namespace AdvancedBundleEditorPlugin
             {
                 //First we need to setup the line for reading
                 // ReSharper disable once StringIndexOfIsCultureSpecific.1
-                int commentPosition = line.IndexOf("//");
+                int commentPosition = line.IndexOf("//"); //Remove comments
                 if (commentPosition != -1 && commentPosition != 0)
                 {
                     line = line.Remove(commentPosition).TrimEnd(' ');
                 }
+                //If the line is a comment, then we don't bother parsing it
                 if (commentPosition == 0 || string.IsNullOrEmpty(line))
                 {
                     line = sr.ReadLine();
                     continue;
                 }
 
+                //If it starts with a [ that means its a Property
                 if (line.StartsWith("["))
                 {
+                    //Extract the name of the property, probably a better way to do this.
                     switch (line.Replace("[", "").Replace("]", "").Split('=').First().Trim(' '))
                     {
                         #region --Parse Asset Bools--
+                        //Each of these extracts then parses the bools from the line
                         case "AddToNetregs":
                             {
                                 bool.TryParse(line.Split('=').Last().TrimEnd(']').Trim(' '), out bool value);
@@ -250,6 +254,7 @@ namespace AdvancedBundleEditorPlugin
                             }
                         case "SuperBundleName":
                             {
+                                //swbf2 doesn't have super bundles, so no need to bother loading them
                                 if (!ProfilesLibrary.IsLoaded(ProfileVersion.StarWarsBattlefrontII))
                                 {
                                     if (App.AssetManager.GetSuperBundleId(line.Split('=').Last().TrimEnd(']').Trim(' ')) != -1)
@@ -269,6 +274,7 @@ namespace AdvancedBundleEditorPlugin
                             }
                         case "BundleType":
                             {
+                                //Annoying setup to extract the BundleType from the string
                                 switch (line.Split('=').Last().TrimEnd(']').Trim(' '))
                                 {
                                     case "Shared":
@@ -308,8 +314,9 @@ namespace AdvancedBundleEditorPlugin
                         #endregion
                     }
                 }
-                else
+                else //It has to be an Instruction if its not a Property
                 {
+                    //We need to remove curly brackets from the Instruction so TriggerInstruction() can parse it
                     opProperties.TriggerInstruction(line.Replace("{", "").Replace("}", ""), task);
                 }
 
@@ -322,6 +329,7 @@ namespace AdvancedBundleEditorPlugin
         #region --Bunpy(Python API reading)--
         private static void ReadPy(FrostyTaskWindow task)
         {
+            //Check if we need to Initialize the BunpyApi or not
             if (BunpyApi.PythonInstallValid == null || !BunpyApi.PythonInstallValid)
             {
                 BunpyApi.Initialize(task);   
@@ -724,8 +732,11 @@ namespace AdvancedBundleEditorPlugin
         public static void Initialize(FrostyTaskWindow task)
         {
             task.Update("Determining Python 3.8 installation...");
+            
+            //Really annoying way of brute forcing our way to the installations
             if (File.Exists($@"C:\Users\{Environment.UserName}\AppData\Local\Programs\Python\Python38\python38.dll"))
             {
+                //If the pythonDll is in its default install location
                 pythonDll = $@"C:\Users\{Environment.UserName}\AppData\Local\Programs\Python\Python38\python38.dll";
                 Config.Add("BunpyLocation", pythonDll);
                 task.Update("Python.dll found!");
@@ -735,6 +746,7 @@ namespace AdvancedBundleEditorPlugin
             }
             else if (File.Exists(@Config.Get("BunpyLocation", "") + @"\python38.dll")) //Get the path from the user
             {
+                //If its not in the default install location then the user has to configure it manually
                 pythonDll = @Config.Get("BunpyLocation", "") + @"\python38.dll";
                 task.Update("Python.dll found!");
 
@@ -764,6 +776,8 @@ namespace AdvancedBundleEditorPlugin
                 MessageBoxResult result = FrostyMessageBox.Show("Pythonnet's installation seems to be invalid or I have been unable to find it. Would you like me to install it for you?", "Bundle Operator", MessageBoxButton.YesNo);
                 if (result == MessageBoxResult.Yes)
                 {
+                    //We first try to uninstall pythonnet incase the user has an invalid installation
+                    //This will help with errors
                     Process.Start("CMD.exe", "/C py -3.8 -m pip uninstall pythonnet");
                     Process cmd = Process.Start("CMD.exe", "/C py -3.8 -m pip install pythonnet==2.5.0");
                     if (cmd != null && cmd.HasExited && File.Exists($@"C:\Users\{Environment.UserName}\AppData\Local\Programs\Python\Python38\Lib\site-packages\clr.pyd"))
@@ -799,17 +813,20 @@ namespace AdvancedBundleEditorPlugin
 
             while (line != null)
             {
-                code += "\n" + line; //By default we just directly pass the new line in
+                code += "\n" + line; //We go through line by line adding it to the Code
+                //We add \n to it that way it gets put on a new line each time
                 line = @sr.ReadLine();
             }
             sr.Close();
             
             task.Update("Executing python...");
-            var gil = Py.GIL();
+            var gil = Py.GIL(); //No idea what the purpose of this is tbh, I just know its important
             try
             {
+                //Process the code so PythonEngine can actually execute it
+                //(by default it uses dummy code from Frostpy.BunpyApi, we need to replace this with our C# code)
                 string processedCode = ProcessCode(code);
-                PythonEngine.Exec(processedCode);
+                PythonEngine.Exec(processedCode); //This will run the processed code
             }
             catch (Exception e)
             {
@@ -818,7 +835,7 @@ namespace AdvancedBundleEditorPlugin
             }
             finally
             {
-                gil.Dispose();
+                gil.Dispose(); //This should always be the last thing we do when executing python code
             }
         }
 
@@ -829,6 +846,8 @@ namespace AdvancedBundleEditorPlugin
         /// <returns></returns>
         private static string ProcessCode(string code)
         {
+            //Replace all of our strings with the actual ones
+            //Very lengthy way of doing this, I'm sure it can be done better but it works for now
             string processedCode = code.Replace("import Frostpy", "import clr\nclr.AddReference(\"AdvancedBundleEditorPlugin\")\nimport AdvancedBundleEditorPlugin").Replace("from Frostpy import BunpyApi", "import clr\nclr.AddReference(\"AdvancedBundleEditorPlugin\")\nfrom AdvancedBundleEditorPlugin import BunpyApi");
             return processedCode.Replace("Frostpy.BunpyApi.", "AdvancedBundleEditorPlugin.BunpyApi.");
         }
@@ -839,6 +858,7 @@ namespace AdvancedBundleEditorPlugin
         #region --Classes--
         /// <summary>
         /// Dummy class for an asset that Bunpy can interact with. Keep it nice and simple as to not upset pythonnet too much
+        /// (so e.g use standard ints or floats and avoid uints or decimals, also try not to pass frosty's classes through)        
         /// </summary>
         [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
         [SuppressMessage("ReSharper", "UnusedAutoPropertyAccessor.Global")]
@@ -975,6 +995,10 @@ namespace AdvancedBundleEditorPlugin
 
             #endregion
 
+            /// <summary>
+            /// This acts as the C# equivalent to python's __init__ method
+            /// When creating constructors, make sure __init__ exists with the same params and such for the python dummy classes
+            /// </summary>
             public Asset(string filePath)
             {
                 FilePath = filePath;
@@ -983,6 +1007,7 @@ namespace AdvancedBundleEditorPlugin
 
         /// <summary>
         /// Dummy class for a bundle that Bunpy can interact with. Keep it nice and simple as to not upset pythonnet too much
+        /// (so e.g use standard ints or floats and avoid uints or decimals, also try not to pass frosty's classes through)
         /// </summary>
         [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
         [SuppressMessage("ReSharper", "UnusedAutoPropertyAccessor.Global")]
@@ -1042,6 +1067,10 @@ namespace AdvancedBundleEditorPlugin
                 return new Bundle(bundleEntry.Name);
             }
 
+            /// <summary>
+            /// This acts as the C# equivelant to python's __init__ method
+            /// When creating constructors, make sure __init__ exists with the same params and such for the python dummy classes
+            /// </summary>
             public Bundle(string name)
             {
                 Name = name;
@@ -1069,27 +1098,36 @@ namespace AdvancedBundleEditorPlugin
             
             List<Guid> checkedAssets = new List<Guid>();
             List<Guid> assets = new List<Guid>() { App.AssetManager.GetEbxEntry(AssetToAdd.FilePath).Guid };
+            
+            //We loop over our assets list until it is empty, that way add all of the assets we need to
             while (assets.Count != 0)
             {
+                //Check to see if our asset has been checked already. If it has we remove it from this list and continue
                 if (checkedAssets.Contains(assets[0]))
                 {
                     assets.Remove(assets[0]);
                     continue;
                 }
+                
+                //Get the Ebx entry from the guid
                 EbxAssetEntry assetToCheck = App.AssetManager.GetEbxEntry(assets[0]);
                 BundleEntry bundle = App.AssetManager.GetBundleEntry(App.AssetManager.GetBundleId(SelectedBundle.Name));
                 
+                //If its recursive we need to add its references to the assets we check, that way we check everything below it
                 if (Recursive)
                 {
                     assets.AddRange(assetToCheck.EnumerateDependencies());
                 }
                 
+                //If its not valid and we do not need to forcefully add it then we remove it from the list and mark it as checked
                 if (!ForceAdd && !BundleEditors.AssetRecAddValid(assetToCheck, bundle))
                 {
                     assets.Remove(assetToCheck.Guid);
                     checkedAssets.Add(assetToCheck.Guid);
                     continue;
                 }
+                
+                //TODO: Add in bool for adding asset to bundle(like Bunops)
                 BundleEditors.AddAssetToBundle(assetToCheck, bundle);
 
                 if (AddToNetregs && BundleEditors.AssetAddNetworkValid(assetToCheck, bundle))
@@ -1212,6 +1250,8 @@ namespace AdvancedBundleEditorPlugin
         public static void AddBundle(string BundlePath, string SuperBundleName, string BundleType = "Shared",
             bool GenerateBlueprints = true, string BlueprintType = "BlueprintBundle")
         {
+            //If the BundlePath is invalid then we don't do anything
+            //TODO: Log an error in this case instead of just returning
             if (string.IsNullOrEmpty(BundlePath)) return;
             
             switch (BundleType)
@@ -1219,7 +1259,8 @@ namespace AdvancedBundleEditorPlugin
                 case "Shared":
                 {
                     BundleEntry newBundle = App.AssetManager.AddBundle("win32/" + BundlePath.ToLower(), FrostySdk.Managers.BundleType.SharedBundle, App.AssetManager.GetSuperBundleId(SuperBundleName));
-                    if (!GenerateBlueprints) return;
+                    if (!GenerateBlueprints) return; //If we aren't generating any blueprints then our job here is done
+                    //Since this is a shared bundle, we only need to create the Network Registries and Meshvariations
                     for (int i = 0; i != 2; i++)
                     {
                         EbxAsset blueprint;
@@ -1252,8 +1293,10 @@ namespace AdvancedBundleEditorPlugin
                 case "Sublevel":
                 {
                     BundleEntry newBundle = App.AssetManager.AddBundle("win32/" + BundlePath.ToLower(), FrostySdk.Managers.BundleType.SubLevel, App.AssetManager.GetSuperBundleId(SuperBundleName));
-                    if (!GenerateBlueprints) return;
+                    if (!GenerateBlueprints) return; //If we aren't generating any blueprints then our job here is done
                     
+                    //Since this is a sublevel, we first need to create the Subworld
+                    //TODO: move this process into a new method, that way we don't need to do this long setup every time we want to create ebx
                     EbxAsset sublevel = new EbxAsset(TypeLibrary.CreateObject("SubWorldData"));
                     sublevel.SetFileGuid(Guid.NewGuid());
 

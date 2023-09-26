@@ -9,13 +9,6 @@ using System.Windows.Controls;
 
 namespace AdvancedBundleEditorPlugin
 {
-    public class BundlesTabExtension : TabExtension
-    {
-        public override string TabItemName => "Bundles";
-
-        public override FrostyTabItem TabContent => new BundleTabItem();
-    }
-
     public class SuperBundlesTabExtension : TabExtension
     {
         public override string TabItemName => "Super Bundles";
