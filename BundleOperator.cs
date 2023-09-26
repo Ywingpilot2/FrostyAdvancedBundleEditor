@@ -38,9 +38,13 @@ namespace AdvancedBundleEditorPlugin
                 {
                     ReadBunop(task);
                 }
-                else
+                else if (BunOpName != "Frostpy.py")
                 {
                     ReadPy(task);
+                }
+                else
+                {
+                    App.Logger.LogError("Can't open file {0}, it is not a valid operation.", BunOpName);
                 }
             });
             App.EditorWindow.DataExplorer.RefreshAll();
@@ -798,10 +802,20 @@ namespace AdvancedBundleEditorPlugin
             sr.Close();
             
             task.Update("Executing python...");
-            using (Py.GIL())
+            var gil = Py.GIL();
+            try
             {
                 string processedCode = ProcessCode(code);
-                PythonEngine.Exec(ProcessCode(@processedCode));
+                PythonEngine.Exec(processedCode);
+            }
+            catch (Exception e)
+            {
+                App.Logger.LogError("Execution of python code failed with exception: {0}", e.Message);
+                gil.Dispose();
+            }
+            finally
+            {
+                gil.Dispose();
             }
         }
 
