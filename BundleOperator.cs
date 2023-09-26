@@ -322,7 +322,10 @@ namespace AdvancedBundleEditorPlugin
         #region --Bunpy(Python API reading)--
         private static void ReadPy(FrostyTaskWindow task)
         {
-            BunpyApi.Initialize(task);
+            if (BunpyApi.PythonInstallValid == null || !BunpyApi.PythonInstallValid)
+            {
+                BunpyApi.Initialize(task);   
+            }
             if (BunpyApi.PythonInstallValid)
             {
                 BunpyApi.ExecutePy(BunOpPath, task );
