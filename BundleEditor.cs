@@ -1278,16 +1278,33 @@ namespace AdvancedBundleEditorPlugin
         public static void AddAssetToTables(EbxAssetEntry AssetToBundle, BundleEntry SelectedBundle)
         {
             EbxAsset ebx = App.AssetManager.GetEbx(AssetToBundle);
+            if (SelectedBundle.Type == BundleType.SharedBundle || SelectedBundle.Type == BundleType.BlueprintBundle)
+            {
+                if (hasUnlockIdTable && TypeLibrary.IsSubClassOf(AssetToBundle.Type, "UnlockAssetBase"))
+                {
+                    foreach (EbxAssetEntry lAssetEntry in App.AssetManager.EnumerateEbx("LevelData"))
+                    {
+                        EbxAsset lvlEbx = App.AssetManager.GetEbx(lAssetEntry);
+                        uint unlockId = ((dynamic)ebx.RootObject).Identifier;
+                        
+                        if (((dynamic)lvlEbx.RootObject).UnlockIdTable.Identifiers.Contains(unlockId)) continue;
+                        
+                        ((dynamic)lvlEbx.RootObject).UnlockIdTable.Identifiers.Add(unlockId);
+                        App.AssetManager.ModifyEbx(App.AssetManager.GetEbxEntry(lvlEbx.FileGuid).Name, lvlEbx);
+                    }
+                }
+            }
+            
+            //If its not a shared/blueprint bundle then its a sublevel
             EbxAssetEntry lvlAssetEntry = App.AssetManager.GetEbxEntry(App.AssetManager.GetSuperBundle(SelectedBundle.SuperBundleId).Name.Remove(0, 6));
             if (hasUnlockIdTable && TypeLibrary.IsSubClassOf(AssetToBundle.Type, "UnlockAssetBase") && lvlAssetEntry != null)
             {
                 EbxAsset lvlEbx = App.AssetManager.GetEbx(lvlAssetEntry);
                 uint unlockId = ((dynamic)ebx.RootObject).Identifier;
-                if (!((dynamic)lvlEbx.RootObject).UnlockIdTable.Identifiers.Contains(unlockId))
-                {
-                    ((dynamic)lvlEbx.RootObject).UnlockIdTable.Identifiers.Add(unlockId);
-                    App.AssetManager.ModifyEbx(App.AssetManager.GetEbxEntry(lvlEbx.FileGuid).Name, lvlEbx);
-                }
+                if (((dynamic)lvlEbx.RootObject).UnlockIdTable.Identifiers.Contains(unlockId)) return;
+                
+                ((dynamic)lvlEbx.RootObject).UnlockIdTable.Identifiers.Add(unlockId);
+                App.AssetManager.ModifyEbx(App.AssetManager.GetEbxEntry(lvlEbx.FileGuid).Name, lvlEbx);
             }
         }
         #endregion

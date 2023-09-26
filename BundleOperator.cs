@@ -763,6 +763,8 @@ namespace AdvancedBundleEditorPlugin
             if (File.Exists($@"C:\Users\{Environment.UserName}\AppData\Local\Programs\Python\Python38\Lib\site-packages\clr.pyd"))
             {
                 task.Update("Pythonnet valid!");
+                Config.Add("PynetLocation",
+                    $@"C:\Users\{Environment.UserName}\AppData\Local\Programs\Python\Python38\Lib\site-packages\clr.pyd");
                 PythonInstallValid = true;
             }
             else if (File.Exists(@Config.Get("BunpyLocation", "") + @"\Lib\site-packages\clr.pyd")) //Get the path from the user
@@ -783,11 +785,15 @@ namespace AdvancedBundleEditorPlugin
                     if (cmd != null && cmd.HasExited && File.Exists($@"C:\Users\{Environment.UserName}\AppData\Local\Programs\Python\Python38\Lib\site-packages\clr.pyd"))
                     {
                         task.Update("Pythonnet valid!");
+                        Config.Add("PynetLocation",
+                            $@"C:\Users\{Environment.UserName}\AppData\Local\Programs\Python\Python38\Lib\site-packages\clr.pyd");
                         PythonInstallValid = true;
                     }
                     else if (File.Exists(@Config.Get("BunpyLocation", "") + @"\Lib\site-packages\clr.pyd"))
                     {
                         task.Update("Pythonnet valid!");
+                        Config.Add("PynetLocation",
+                            $@"C:\Users\{Environment.UserName}\AppData\Local\Programs\Python\Python38\Lib\site-packages\clr.pyd");
                         PythonInstallValid = true;
                     }
                     else
