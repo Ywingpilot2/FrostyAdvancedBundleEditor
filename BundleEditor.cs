@@ -1492,7 +1492,7 @@ namespace AdvancedBundleEditorPlugin
                 //If this bundle isn't a shared bundle(unless we are trying to load it into another shared bundle for whatever reason)
                 //AND if this asset's super bundle name doesn't equal the bundles name(meaning this asset is loaded into the leveldata)
                 //AND this bundle isn't the same as the one we are adding to
-                if ((bentry.Type != BundleType.SharedBundle || BundleToCheck.Type == BundleType.SharedBundle || Config.Get("ModifySharedBundled", false)) && (App.AssetManager.GetSuperBundle(bentry.SuperBundleId).Name != BundleToCheck.Name || Config.Get("ModifyLevelBundled", false)) && bentry != BundleToCheck)
+                if ((bentry.Type != BundleType.SharedBundle || BundleToCheck.Type == BundleType.SharedBundle || Config.Get("ModifySharedBundled", false)) && (App.AssetManager.GetSuperBundle(BundleToCheck.SuperBundleId).Name != bentry.Name || Config.Get("ModifyLevelBundled", false)) && bentry != BundleToCheck)
                 {
                     IsValid = true; //The asset is valid 
                 }
@@ -1502,6 +1502,8 @@ namespace AdvancedBundleEditorPlugin
                     break;
                 }
             }
+
+            if (!IsValid) return IsValid || AssetToCheck.AddedBundles.Count + AssetToCheck.Bundles.Count == 0;
             foreach (int bunID in AssetToCheck.AddedBundles)
             {
                 BundleEntry bentry = App.AssetManager.GetBundleEntry(bunID);
@@ -1509,7 +1511,10 @@ namespace AdvancedBundleEditorPlugin
                 //If this bundle isn't a shared bundle(unless we are trying to load it into another shared bundle for whatever reason)
                 //AND if this asset's super bundle name doesn't equal the bundles name(meaning this asset is loaded into the leveldata)
                 //AND this bundle isn't the same as the one we are adding to
-                if ((bentry.Type != BundleType.SharedBundle || BundleToCheck.Type == BundleType.SharedBundle || Config.Get("ModifySharedBundled", false)) && (App.AssetManager.GetSuperBundle(bentry.SuperBundleId).Name != BundleToCheck.Name || Config.Get("ModifyLevelBundled", false)) && bentry != BundleToCheck)
+                if ((bentry.Type != BundleType.SharedBundle || BundleToCheck.Type == BundleType.SharedBundle ||
+                     Config.Get("ModifySharedBundled", false)) &&
+                    (App.AssetManager.GetSuperBundle(BundleToCheck.SuperBundleId).Name != bentry.Name ||
+                     Config.Get("ModifyLevelBundled", false)) && bentry != BundleToCheck)
                 {
                     IsValid = true; //The asset is valid 
                 }
@@ -1519,6 +1524,7 @@ namespace AdvancedBundleEditorPlugin
                     break;
                 }
             }
+
             return IsValid || AssetToCheck.AddedBundles.Count + AssetToCheck.Bundles.Count == 0;
         }
 
