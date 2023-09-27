@@ -1137,6 +1137,7 @@ namespace AdvancedBundleEditorPlugin
                 if (AddToNetregs && BundleEditors.AssetAddNetworkValid(assetToCheck, bundle))
                 {
                     BundleEditors.AddAssetToNetRegs(assetToCheck, bundle);
+                    BundleEditors.AddAssetToTables(assetToCheck, bundle);
                 }
                 else if (AddToMeshVariations && BundleEditors.AssetAddMeshVariationValid(assetToCheck, bundle))
                 {
@@ -1193,6 +1194,7 @@ namespace AdvancedBundleEditorPlugin
                 if (AddToNetregs && BundleEditors.AssetRemNetworkValid(assetToCheck, bundle))
                 {
                     BundleEditors.RemoveAssetFromNetRegs(assetToCheck, bundle);
+                    BundleEditors.RemoveAssetFromTables(assetToCheck, bundle);
                 }
                 else if (AddToMeshVariations && BundleEditors.AssetRemMeshVariationValid(assetToCheck, bundle))
                 {
