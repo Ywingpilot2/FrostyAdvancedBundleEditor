@@ -153,3 +153,6 @@ class BunpyApi:  # really annoying work around. We shove everything inside a cla
         pass
 
     SelectedAsset = Asset("")
+    """
+    The currently selected asset in the Data Explorer
+    """
