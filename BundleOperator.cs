@@ -1420,6 +1420,27 @@ namespace AdvancedBundleEditorPlugin
             return assets;
         }
         #endregion
+
+        #region Properties
+
+        public static Asset SelectedAsset
+        {
+            get => Asset.ParseAssetEntry(App.EditorWindow.DataExplorer.SelectedAsset as EbxAssetEntry);
+
+            set
+            {
+                if (App.AssetManager.GetEbxEntry(value.FilePath) != null)
+                {
+                    App.EditorWindow.DataExplorer.SelectedAsset = App.AssetManager.GetEbxEntry(value.FilePath);   
+                }
+                else
+                {
+                    App.Logger.LogError("{0} is not a valid asset. Did you forget to set the FilePath?", value.FilePath);
+                }
+            }
+        }
+
+        #endregion
         
         #endregion
 
