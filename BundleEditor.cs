@@ -1363,7 +1363,7 @@ namespace AdvancedBundleEditorPlugin
             {
                 foreach (EbxAssetEntry networkRegistry in App.AssetManager.EnumerateEbx(SelectedBundle))
                 {
-                    if (networkRegistry.Type == "NetworkRegistryAsset")
+                    if (networkRegistry.Type == "NetworkRegistryAsset" && networkRegistry.EnumerateDependencies().Contains(AssetToRemove.Guid))
                     {
                         EbxAsset netRegEbx = App.AssetManager.GetEbx(networkRegistry);
                         List<PointerRef> objects = ((dynamic)netRegEbx.RootObject).Objects;
@@ -1587,6 +1587,10 @@ namespace AdvancedBundleEditorPlugin
         /// <returns>A bool on whether or not the asset is valid</returns>
         public static bool AssetRemNetworkValid(EbxAssetEntry AssetToCheck, BundleEntry BundleToCheck)
         {
+            if (BundleToCheck.Added)
+            {
+                return networkedTypes.Contains(AssetToCheck.Type) && Config.Get("AllowRootNetreg", false);
+            }
             EbxAssetEntry registry = App.AssetManager.GetEbxEntry(networkRegistries[networkedBundles.IndexOf(BundleToCheck.Name)].FileGuid);
             return networkedTypes.Contains(AssetToCheck.Type) && (networkedBundles.Contains(BundleToCheck.Name) || BundleToCheck.Added) && Config.Get("AllowRootNetreg", false) && registry.EnumerateDependencies().Contains(AssetToCheck.Guid);
         }
