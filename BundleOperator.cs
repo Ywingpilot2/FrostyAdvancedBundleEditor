@@ -404,7 +404,7 @@ namespace AdvancedBundleEditorPlugin
                                 BundleEntry bundle = App.AssetManager.GetBundleEntry(bunId);
 
                                 //Adding
-                                if ((BundleEditors.AssetRecAddValid(currentAsset, bundle) || ForceAdd) && ((!OnlyModified || currentAsset.IsModified) || (!OnlyAdded || currentAsset.IsAdded)) && !bundledAssets.Contains(currentAsset.Guid))
+                                if ((BundleEditors.AssetOpAddValid(currentAsset, bundle) || ForceAdd) && ((!OnlyModified || currentAsset.IsModified) || (!OnlyAdded || currentAsset.IsAdded)) && !bundledAssets.Contains(currentAsset.Guid))
                                 {
                                     if ((IgnoreTypes && !Types.Contains(currentAsset.Type)) || (ExclusiveTypes && Types.Contains(currentAsset.Type)) || (!IgnoreTypes && !ExclusiveTypes))
                                     {
@@ -1124,7 +1124,7 @@ namespace AdvancedBundleEditorPlugin
                 }
                 
                 //If its not valid and we do not need to forcefully add it then we remove it from the list and mark it as checked
-                if (!ForceAdd && !BundleEditors.AssetRecAddValid(assetToCheck, bundle))
+                if (!ForceAdd && !BundleEditors.AssetOpAddValid(assetToCheck, bundle))
                 {
                     assets.Remove(assetToCheck.Guid);
                     checkedAssets.Add(assetToCheck.Guid);

@@ -1597,5 +1597,60 @@ namespace AdvancedBundleEditorPlugin
         }
 
         #endregion
+
+        #region BunOp Requirement Checks
+
+        /// <summary>
+        /// This will check if an asset is valid for the AddAsset Bundle Operation
+        /// </summary>
+        /// <param name="AssetToCheck"></param>
+        /// <param name="BundleToCheck"></param>
+        /// <returns>A bool on whether or not the asset is valid</returns>
+        public static bool AssetOpAddValid(EbxAssetEntry AssetToCheck, BundleEntry BundleToCheck)
+        {
+            bool IsValid = false;
+
+            //Enumerate over all of the bundles the asset has
+            foreach (int bunID in AssetToCheck.Bundles)
+            {
+                BundleEntry bentry = App.AssetManager.GetBundleEntry(bunID);
+
+                //If this bundle isn't a shared bundle(unless we are trying to load it into another shared bundle for whatever reason)
+                //AND if this asset's super bundle name doesn't equal the bundles name(meaning this asset is loaded into the leveldata)
+                //AND this bundle isn't the same as the one we are adding to
+                if ((bentry.Type != BundleType.SharedBundle) && (App.AssetManager.GetSuperBundle(BundleToCheck.SuperBundleId).Name != bentry.Name) && bentry != BundleToCheck)
+                {
+                    IsValid = true; //The asset is valid 
+                }
+                else
+                {
+                    IsValid = false;
+                    break;
+                }
+            }
+
+            if (!IsValid) return IsValid || AssetToCheck.AddedBundles.Count + AssetToCheck.Bundles.Count == 0;
+            foreach (int bunID in AssetToCheck.AddedBundles)
+            {
+                BundleEntry bentry = App.AssetManager.GetBundleEntry(bunID);
+
+                //If this bundle isn't a shared bundle(unless we are trying to load it into another shared bundle for whatever reason)
+                //AND if this asset's super bundle name doesn't equal the bundles name(meaning this asset is loaded into the leveldata)
+                //AND this bundle isn't the same as the one we are adding to
+                if ((bentry.Type != BundleType.SharedBundle) && (App.AssetManager.GetSuperBundle(BundleToCheck.SuperBundleId).Name != bentry.Name) && bentry != BundleToCheck)
+                {
+                    IsValid = true; //The asset is valid 
+                }
+                else
+                {
+                    IsValid = false;
+                    break;
+                }
+            }
+
+            return IsValid || AssetToCheck.AddedBundles.Count + AssetToCheck.Bundles.Count == 0;
+        }      
+
+        #endregion
     }
 }
