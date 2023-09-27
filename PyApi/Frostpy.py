@@ -139,7 +139,7 @@ class BunpyApi:  # really annoying work around. We shove everything inside a cla
         """
         return BunpyApi.Bundle("win32/" + BundlePath.lower())
 
-    def GetAllOfType(type: str, OnlyModified: bool, OnlyAdded: bool) -> List[Asset]:
+    def GetAllOfType(type: str, OnlyModified=False, OnlyAdded=False) -> List[Asset]:
         """
         Gets a list of all of the Assets matching specified parameters
         :param type: The type to search for. If left blank will enumerate over all files
@@ -151,3 +151,5 @@ class BunpyApi:  # really annoying work around. We shove everything inside a cla
 
     def Log(Message: str):
         pass
+
+    SelectedAsset = Asset("")
