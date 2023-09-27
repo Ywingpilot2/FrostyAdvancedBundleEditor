@@ -719,7 +719,7 @@ namespace AdvancedBundleEditorPlugin
     #region --Python API--
 
     [SuppressMessage("ReSharper", "ClassNeverInstantiated.Global")]
-    public class BunpyApi
+    public static class BunpyApi
     {
         private static string pythonDll = ""; //Path gets set later down the line
         public static bool PythonInstallValid;
