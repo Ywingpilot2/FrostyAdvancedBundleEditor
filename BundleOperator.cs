@@ -330,13 +330,13 @@ namespace AdvancedBundleEditorPlugin
         private static void ReadPy(FrostyTaskWindow task)
         {
             //Check if we need to Initialize the BunpyApi or not
-            if (BunpyApi.PythonInstallValid == null || !BunpyApi.PythonInstallValid)
+            if (!BunpyApi.PythonInstallValid)
             {
                 BunpyApi.Initialize(task);   
             }
             if (BunpyApi.PythonInstallValid)
             {
-                BunpyApi.ExecutePy(BunOpPath, task );
+                BunpyApi.ExecutePy(BunOpPath, task);
             }
         }
         #endregion
@@ -719,7 +719,7 @@ namespace AdvancedBundleEditorPlugin
     #region --Python API--
 
     [SuppressMessage("ReSharper", "ClassNeverInstantiated.Global")]
-    public static class BunpyApi
+    public class BunpyApi
     {
         private static string pythonDll = ""; //Path gets set later down the line
         public static bool PythonInstallValid;
@@ -743,6 +743,7 @@ namespace AdvancedBundleEditorPlugin
 
                 Environment.SetEnvironmentVariable("PYTHONNET_PYDLL", pythonDll);
                 PythonEngine.Initialize();
+                PythonEngine.BeginAllowThreads();
             }
             else if (File.Exists(@Config.Get("BunpyLocation", "") + @"\python38.dll")) //Get the path from the user
             {
@@ -752,6 +753,7 @@ namespace AdvancedBundleEditorPlugin
 
                 Environment.SetEnvironmentVariable("PYTHONNET_PYDLL", pythonDll);
                 PythonEngine.Initialize();
+                PythonEngine.BeginAllowThreads();
             }
             else
             {
