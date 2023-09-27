@@ -196,19 +196,22 @@ namespace AdvancedBundleEditorPlugin
                                     {
                                         case "(Selected)":
                                             {
-                                                if (App.EditorWindow.DataExplorer.SelectedAssets == null)
+                                                Application.Current.Dispatcher.Invoke(() =>
                                                 {
-                                                    values.Add((App.EditorWindow.DataExplorer.SelectedAsset as EbxAssetEntry).Guid);
-                                                }
-                                                else
-                                                {
-                                                    // ReSharper disable once PossibleInvalidCastExceptionInForeachLoop
-                                                    // ^ SelectedAssets will never be invalid in this case(at least as far as I have tested)
-                                                    foreach (EbxAssetEntry assetEntry in App.EditorWindow.DataExplorer.SelectedAssets)
+                                                    if (App.EditorWindow.DataExplorer.SelectedAssets == null)
                                                     {
-                                                        values.Add(assetEntry.Guid);
+                                                        values.Add(((EbxAssetEntry)App.EditorWindow.DataExplorer.SelectedAsset).Guid);
                                                     }
-                                                }
+                                                    else
+                                                    {
+                                                        // ReSharper disable once PossibleInvalidCastExceptionInForeachLoop
+                                                        // ^ SelectedAssets will never be invalid in this case(at least as far as I have tested)
+                                                        foreach (EbxAssetEntry assetEntry in App.EditorWindow.DataExplorer.SelectedAssets)
+                                                        {
+                                                            values.Add(assetEntry.Guid);
+                                                        }
+                                                    }        
+                                                });
                                                 break;
                                             }
                                         case "(AllOfTypes)":
@@ -1425,13 +1428,24 @@ namespace AdvancedBundleEditorPlugin
 
         public static Asset SelectedAsset
         {
-            get => Asset.ParseAssetEntry(App.EditorWindow.DataExplorer.SelectedAsset as EbxAssetEntry);
+            get
+            {
+                Asset asset = null;
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    asset = Asset.ParseAssetEntry(App.EditorWindow.DataExplorer.SelectedAsset as EbxAssetEntry);
+                });
+                return asset;
+            }
 
             set
             {
                 if (App.AssetManager.GetEbxEntry(value.FilePath) != null)
                 {
-                    App.EditorWindow.DataExplorer.SelectedAsset = App.AssetManager.GetEbxEntry(value.FilePath);   
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        App.EditorWindow.DataExplorer.SelectedAsset = App.AssetManager.GetEbxEntry(value.FilePath);
+                    });
                 }
                 else
                 {
