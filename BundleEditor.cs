@@ -1045,6 +1045,7 @@ namespace AdvancedBundleEditorPlugin
                     }
                 }
             }
+            if (mvdb == null) return;
             dynamic mvdbObject = mvdb.RootObject as dynamic;
             dynamic newMVEntry = TypeLibrary.CreateObject("MeshVariationDatabaseEntry"); //Create a new entry for us to add to the MVDB
 
