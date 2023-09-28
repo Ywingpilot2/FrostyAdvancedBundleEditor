@@ -1587,6 +1587,8 @@ namespace AdvancedBundleEditorPlugin
         /// <returns>A bool on whether or not the asset is valid</returns>
         public static bool AssetRemNetworkValid(EbxAssetEntry AssetToCheck, BundleEntry BundleToCheck)
         {
+            if (!networkedBundles.Contains(BundleToCheck.Name)) return false;
+            
             if (BundleToCheck.Added)
             {
                 return networkedTypes.Contains(AssetToCheck.Type) && Config.Get("AllowRootNetreg", false);
