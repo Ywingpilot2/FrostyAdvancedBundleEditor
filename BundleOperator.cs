@@ -1284,7 +1284,7 @@ namespace AdvancedBundleEditorPlugin
                         else
                         {
                             blueprint = new EbxAsset(TypeLibrary.CreateObject("NetworkRegistryAsset"));
-                            name = newBundle.Name.Split('/').Last() + "_networkregistry_Win32";
+                            name = BundlePath.Replace(BundlePath.Split('/').Last(), "") + BundlePath.Split('/').Last().ToLower() + "_networkregistry_Win32";
                         }
                         blueprint.SetFileGuid(Guid.NewGuid());
 
