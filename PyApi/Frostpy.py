@@ -149,6 +149,17 @@ class BunpyApi:  # really annoying work around. We shove everything inside a cla
         """
         return []
 
+    def GetAllInBundle(Bundle: Bundle, OnlyModified=False, OnlyAdded=False) -> List[Asset]:
+        """
+        Gets a list of all of the Assets matching specified parameters
+        :param Bundle: The bundle to search through
+        :param OnlyModified: Whether or not to only search for modified assets
+        :param OnlyAdded: Whether or not to only search for added assets
+        :return: A list of the assets found
+        """
+        return []
+
+
     def Log(Message: str):
         pass
 

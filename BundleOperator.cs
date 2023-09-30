@@ -1422,6 +1422,19 @@ namespace AdvancedBundleEditorPlugin
 
             return assets;
         }
+        
+        public static List<Asset> GetAllInBundle(Bundle bundle, bool onlyModified = false, bool onlyAdded = false)
+        {
+            List<Asset> assets = new List<Asset>();
+            BundleEntry bundleEntry = App.AssetManager.GetBundleEntry(App.AssetManager.GetBundleId(bundle.Name));
+            foreach (EbxAssetEntry assetEntry in App.AssetManager.EnumerateEbx(bundleEntry))
+            {
+                if ((onlyAdded && !assetEntry.IsAdded) || (onlyModified && !assetEntry.IsModified)) continue;
+                assets.Add(Asset.ParseAssetEntry(assetEntry));
+            }
+
+            return assets;
+        }
         #endregion
 
         #region Properties
