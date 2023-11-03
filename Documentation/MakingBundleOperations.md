@@ -2,7 +2,7 @@
 This page will dive into the basics of creating a Bundle Operation Config, or .bunop file.
 
 ## Properties & Instructions
-Properties and Instructions are types of inputs you can give the Bundle Operator. The Bundle Operator reads and executes these line by line, as opposed to reading the whole file at once and deciding off of that.
+Properties and Instructions are types of inputs you can give the Bundle Operator. The Bundle Operator reads and executes these line by line.
 
 Instructions tell the Bundle Operator to do something, such as add an asset to a bundle, they *instruct* the Bundle Operator.
 Instructions are defined by Curly Brackets( "{ }" ), so for example "{AddAssets}" tells the Bundle Operator to add assets to bundles.
@@ -22,7 +22,7 @@ As said previously, Properties and Instructions are read line by line, meaning y
 [Assets = Gameplay/Weapons/BFG/wep_BFG] //The instruction {AddAssets} will use me, since I am set before it
 {AddAssets} // ^ Uses
 
-[Assets = Gameplay/Weapons/SFG/wep_SFG] //The instruction {RemoveAssets} will use me, since I am set after the first Assets, but before it
+[Assets = Gameplay/Weapons/SFG/wep_SFG] //The instruction {RemoveAssets} will use me, since I am set after the first Assets, but before RemoveAssets
 {RemoveAssets}
 ```
 
