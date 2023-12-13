@@ -2,9 +2,9 @@
   <PropertyGroup>
     <Configurations>Developer - Debug;Release - Alpha;Release - Beta;Release - Final</Configurations>
     <Platforms>x64</Platforms>
-    <TargetFrameworks>net48</TargetFrameworks>
-    <AssemblyTitle>BundleEditPlugin</AssemblyTitle>
-    <Product>BundleEditPlugin</Product>
+    <TargetFramework>net48</TargetFramework>
+    <AssemblyTitle>AdvancedBundleEditorPlugin</AssemblyTitle>
+    <Product>AdvancedBundleEditorPlugin</Product>
     <Copyright>Copyright ©  2020</Copyright>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
@@ -45,6 +45,9 @@
   
   <ItemGroup>
     <ProjectReference Include="..\..\FrostyControls\FrostyControls.csproj">
+      <Private>false</Private>
+    </ProjectReference>
+    <ProjectReference Include="..\..\FrostyEditor\FrostyEditor.csproj">
       <Private>false</Private>
     </ProjectReference>
     <ProjectReference Include="..\..\FrostyPlugin\FrostyCore.csproj">

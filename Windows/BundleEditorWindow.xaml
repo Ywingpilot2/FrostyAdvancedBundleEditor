@@ -1,0 +1,265 @@
+﻿<UserControl x:Class="AdvancedBundleEditorPlugin.Windows.BundleEditorWindow"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:local="clr-namespace:AdvancedBundleEditorPlugin.Windows"
+             xmlns:controls="clr-namespace:Frosty.Controls;assembly=FrostyControls"
+             xmlns:controls1="clr-namespace:Frosty.Core.Controls;assembly=FrostyCore"
+             xmlns:sdkmanagers="clr-namespace:FrostySdk.Managers;assembly=FrostySdk"
+             mc:Ignorable="d"
+             d:DesignHeight="704" d:DesignWidth="1250">
+    
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/AdvancedBundleEditorPlugin;component/Themes/Generic.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    
+    <Grid Background="{StaticResource WindowBackground}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="32" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        
+        <Border Grid.Row="1" BorderBrush="{StaticResource SubItemPressed}" BorderThickness="3">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="450"/>
+                    <ColumnDefinition/>
+                </Grid.ColumnDefinitions>
+
+                <Grid>
+                    <controls:FrostyTabControl x:Name="BundleListTabControl">
+                        <controls:FrostyTabControl.Items>
+                            <controls:FrostyTabItem Header="Shared Bundles">
+                                <controls:FrostyTabItem.Content>
+                                    <Border BorderBrush="{StaticResource ControlBackground}"
+                                            BorderThickness="3"
+                                            Margin="0, 0, 3, 0">
+
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="24"/>
+                                                <RowDefinition /> 
+                                            </Grid.RowDefinitions>
+                                            
+                                            <controls:FrostyWatermarkTextBox x:Name="SharedFilterBox" 
+                                                                             Margin="1,1,1,1" 
+                                                                             WatermarkText="Filter" 
+                                                                             BorderThickness="1"/>
+                                            
+                                            <ListBox Grid.Row="1" x:Name="SharedBundlesList">
+                                                <ListBox.DataContext>
+                                                    <sdkmanagers:BundleEntry></sdkmanagers:BundleEntry>
+                                                </ListBox.DataContext>
+                                                <ListBox.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="{Binding DisplayName}"
+                                                                   VerticalAlignment="Center"
+                                                                   Foreground="{StaticResource FontColor}"
+                                                                   FontFamily="MS Reference Sans Serif" />
+                                                    </DataTemplate>
+                                                </ListBox.ItemTemplate>
+                                            </ListBox>
+                                        </Grid>
+                                    </Border>
+                                </controls:FrostyTabItem.Content>
+                            </controls:FrostyTabItem>
+
+                            <controls:FrostyTabItem Header="Sublevel Bundles">
+                                <controls:FrostyTabItem.Content>
+                                    <Border BorderBrush="{StaticResource ControlBackground}"
+                                            BorderThickness="3"
+                                            Margin="0, 0, 3, 0">
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="24"/>
+                                                <RowDefinition /> 
+                                            </Grid.RowDefinitions>
+                                            
+                                            <controls:FrostyWatermarkTextBox x:Name="LevelFilterBox"
+                                                                             Margin="1,1,1,1" 
+                                                                             WatermarkText="Filter" 
+                                                                             BorderThickness="1"/>
+                                            
+                                            <ListBox Grid.Row="1" x:Name="SublevelBundlesList">
+                                                <ListBox.DataContext>
+                                                    <sdkmanagers:BundleEntry></sdkmanagers:BundleEntry>
+                                                </ListBox.DataContext>
+                                                <ListBox.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="{Binding DisplayName}"
+                                                                   VerticalAlignment="Center"
+                                                                   Foreground="{StaticResource FontColor}"
+                                                                   FontFamily="MS Reference Sans Serif" />
+                                                    </DataTemplate>
+                                                </ListBox.ItemTemplate>
+                                            </ListBox>
+                                        </Grid>
+                                    </Border>
+                                </controls:FrostyTabItem.Content>
+                            </controls:FrostyTabItem>
+
+                            <controls:FrostyTabItem Header="Blueprint Bundles">
+                                <controls:FrostyTabItem.Content>
+                                    <Border BorderBrush="{StaticResource ControlBackground}"
+                                            BorderThickness="3"
+                                            Margin="0, 0, 3, 0">
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="24"/>
+                                                <RowDefinition /> 
+                                            </Grid.RowDefinitions>
+                                            
+                                            <controls:FrostyWatermarkTextBox x:Name="BlueprintFilterBox"
+                                                                             Margin="1,1,1,1" 
+                                                                             WatermarkText="Filter" 
+                                                                             BorderThickness="1"/>
+                                            
+                                            <ListBox Grid.Row="1" x:Name="BlueprintBundlesList">
+                                                <ListBox.DataContext>
+                                                    <sdkmanagers:BundleEntry></sdkmanagers:BundleEntry>
+                                                </ListBox.DataContext>
+                                                <ListBox.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="{Binding DisplayName}"
+                                                                   VerticalAlignment="Center"
+                                                                   Foreground="{StaticResource FontColor}"
+                                                                   FontFamily="MS Reference Sans Serif" />
+                                                    </DataTemplate>
+                                                </ListBox.ItemTemplate>
+                                            </ListBox>
+                                        </Grid>
+                                    </Border>
+                                </controls:FrostyTabItem.Content>
+                            </controls:FrostyTabItem>
+                        </controls:FrostyTabControl.Items>
+                    </controls:FrostyTabControl>
+                </Grid>
+                
+                <Grid Grid.Column="1">
+                    <controls:FrostyTabControl x:Name="AssetListTabs">
+                        <controls:FrostyTabControl.Items>
+                            <controls:FrostyTabItem Header="Assets in Bundle">
+                                <controls:FrostyTabItem.Content>
+                                    <Border BorderBrush="{StaticResource ControlBackground}"
+                                            BorderThickness="3">
+                                        <controls1:FrostyDataExplorer x:Name="AssetDataExplorer"/>
+                                    </Border>
+                                </controls:FrostyTabItem.Content>
+                            </controls:FrostyTabItem>
+                            <controls:FrostyTabItem Header="Resources in Bundle">
+                                <controls:FrostyTabItem.Content>
+                                    <Border BorderBrush="{StaticResource ControlBackground}"
+                                            BorderThickness="3">
+                                        <controls1:FrostyDataExplorer x:Name="ResDataExplorer"/>
+                                    </Border>
+                                </controls:FrostyTabItem.Content>
+                            </controls:FrostyTabItem>
+                            <controls:FrostyTabItem Header="Mesh Variation Manager">
+                                <controls:FrostyTabItem.Content>
+                                    <controls1:FrostyPropertyGrid x:Name="PropertyGrid" />
+                                </controls:FrostyTabItem.Content>
+                            </controls:FrostyTabItem>
+                        </controls:FrostyTabControl.Items>
+                    </controls:FrostyTabControl>
+                </Grid>
+
+                <GridSplitter Grid.Column="0"
+                              Background="{StaticResource SubItemPressed}"
+                              Width="3"
+                              ResizeDirection="Columns" />
+            </Grid>
+        </Border>
+        
+        <!--Header with buttons-->
+        <Border Grid.Row="0" BorderBrush="{StaticResource SubItemPressed}" BorderThickness="1">
+            <Border BorderBrush="{StaticResource SubMenuItemHighlight}" 
+                    BorderThickness="0, 1, 0, 1">
+                <Grid Background="{StaticResource ControlBackground}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition />
+                        <ColumnDefinition />
+                        <ColumnDefinition Width="35" />
+                    </Grid.ColumnDefinitions>
+
+                    <!--Buttons-->
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" RenderOptions.EdgeMode="Aliased">
+                        <Button x:Name="AddButton"
+                                Width="26"
+                                Height="26"
+                                Margin="4,0,2,0"
+                                HorizontalAlignment="Left"
+                                Click="AddButton_OnClick"
+                                ToolTip="Add an asset to the currently selected bundle">
+                            <Image Source="pack://application:,,,/FrostyEditor;component/Images/Add.png"
+                                   Width="40" />
+                        </Button>
+                        <Button x:Name="RemoveButton"
+                                Width="26"
+                                Height="26"
+                                Margin="2,0,4,0"
+                                HorizontalAlignment="Left"
+                                Click="RemoveButton_OnClick"
+                                ToolTip="Remove an asset from the currently selected bundle">
+                            <Image Source="pack://application:,,,/FrostyEditor;component/Images/Remove.png"
+                                   Width="40" />
+                        </Button>
+                        
+                        <Grid Background="{StaticResource SubMenuItemHighlight}" Width="1" />
+                        
+                        <Button x:Name="RecAddButton"
+                                Width="26"
+                                Height="26"
+                                Margin="4,0,2,0"
+                                HorizontalAlignment="Left"
+                                Click="RecAddButton_OnClick"
+                                ToolTip="Recursively add the selected asset and its references to the bundle">
+                            <Image Source="pack://application:,,,/FrostyEditor;component/Images/Import.png"
+                                   Width="40" />
+                        </Button>
+                        <Button x:Name="RecRemoveButton"
+                                Width="26"
+                                Height="26"
+                                Margin="2,0,4,0"
+                                HorizontalAlignment="Left"
+                                Click="RecRemoveButton_OnClick"
+                                ToolTip="Recursively remove the selected asset and its references from the bundle">
+                            <Image Source="pack://application:,,,/FrostyEditor;component/Images/Export.png"
+                                   Width="40" />
+                        </Button>
+                        
+                        <Grid Background="{StaticResource SubMenuItemHighlight}" Width="1" />
+                        
+                        <Button x:Name="AddBundleButton"
+                                Width="24"
+                                Height="24"
+                                Margin="4,0,2,0"
+                                HorizontalAlignment="Left"
+                                Click="AddBundleButton_OnClick"
+                                ToolTip="Add a new bundle">
+                            <Image Source="pack://application:,,,/FrostyEditor;component/Images/AddFolder.png"
+                                   Width="30" />
+                        </Button>
+                        
+                        <Grid Background="{StaticResource SubMenuItemHighlight}" Width="1" />
+                        
+                        <Button x:Name="BunOpButton"
+                                Width="26"
+                                Height="26"
+                                Margin="4,0,2,0"
+                                HorizontalAlignment="Left"
+                                Click="BunOpButton_OnClick"
+                                ToolTip="Run a bundle operation">
+                            <Image Source="pack://application:,,,/FrostyEditor;component/Images/Compile.png"
+                                   Width="35" />
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Border>
+    </Grid>
+</UserControl>

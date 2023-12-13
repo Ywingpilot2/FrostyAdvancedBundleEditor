@@ -25,11 +25,11 @@ namespace AdvancedBundleEditorPlugin
         /// <summary>
         /// Initiate a new Bundle Operation
         /// </summary>
-        public BundleOperator InitiateBundleOperation()
+        public void InitiateBundleOperation()
         {
             //create a open file dialogue so the user can select a file
             FrostyOpenFileDialog ofd = new FrostyOpenFileDialog("Open Bundle Operation", "Bundle Operation Config (*.bunop)|*.bunop|Python Script (*.py)|*.py", "BundleOperation");
-            if (!ofd.ShowDialog()) return this;
+            if (!ofd.ShowDialog()) return;
             BunOpName = ofd.FileName.Replace("\\", "/").Split('/').Last();
             BunOpPath = ofd.FileName;
             FrostyTaskWindow.Show(BunOpName, "", (task) =>
@@ -48,7 +48,6 @@ namespace AdvancedBundleEditorPlugin
                 }
             });
             App.EditorWindow.DataExplorer.RefreshAll();
-            return this;
         }
 
         #region --Bunop(pseudo xml reading)--

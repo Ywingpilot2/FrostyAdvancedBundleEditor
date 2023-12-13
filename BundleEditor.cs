@@ -386,14 +386,18 @@ namespace AdvancedBundleEditorPlugin
 
     #endregion
 
-    [TemplatePart(Name = PART_BundleTypeComboBox, Type = typeof(ComboBox))]
-    [TemplatePart(Name = PART_BundlesListBox, Type = typeof(ListBox))]
-    [TemplatePart(Name = PART_DataExplorer, Type = typeof(FrostyDataExplorer))]
-    [TemplatePart(Name = PART_SuperBundleTextBox, Type = typeof(TextBox))]
-    [TemplatePart(Name = PART_BundleFilterTextBox, Type = typeof(TextBox))]
+    // [TemplatePart(Name = PART_BundleTypeComboBox, Type = typeof(ComboBox))]
+    // [TemplatePart(Name = PART_BundlesListBox, Type = typeof(ListBox))]
+    // [TemplatePart(Name = PART_DataExplorer, Type = typeof(FrostyDataExplorer))]
+    // [TemplatePart(Name = PART_SuperBundleTextBox, Type = typeof(TextBox))]
+    // [TemplatePart(Name = PART_BundleFilterTextBox, Type = typeof(TextBox))]
     public class BundleEditor : FrostyBaseEditor
     {
-        private const string PART_BundleTypeComboBox = "PART_BundleTypeComboBox";
+        public override ImageSource Icon => BundleEditorMenuExtension.iconImageSource;
+        
+        #region Old
+
+        /*private const string PART_BundleTypeComboBox = "PART_BundleTypeComboBox";
         private const string PART_BundlesListBox = "PART_BundlesListBox";
         private const string PART_DataExplorer = "PART_DataExplorer";
         private const string PART_SuperBundleTextBox = "PART_SuperBundleTextBox";
@@ -759,7 +763,14 @@ namespace AdvancedBundleEditorPlugin
             EbxAssetEntry entry = dataExplorer.SelectedAsset as EbxAssetEntry;
             App.EditorWindow.OpenAsset(entry);
         }
+        #endregion*/
+
         #endregion
+        
+        static BundleEditor()
+        {
+            DefaultStyleKeyProperty.OverrideMetadata(typeof(BundleEditor), new FrameworkPropertyMetadata(typeof(BundleEditor)));
+        }
     }
 
     /// <summary>

@@ -5,14 +5,15 @@
     xmlns:core="clr-namespace:Frosty.Core.Controls;assembly=FrostyCore"
     xmlns:ctrl="clr-namespace:Frosty.Controls;assembly=FrostyControls"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:fdev="FrostyDeveloper">
+    xmlns:fdev="FrostyDeveloper"
+    xmlns:windows="clr-namespace:AdvancedBundleEditorPlugin.Windows">
 
     <ResourceDictionary.MergedDictionaries>
         <ResourceDictionary Source="/FrostyControls;component/Themes/Generic.xaml"/>
     </ResourceDictionary.MergedDictionaries>
     
-    <!-- BundleEditor -->
-    <Style TargetType="{x:Type local:BundleEditor}">
+    <!-- Old BundleEditor -->
+    <!--<Style TargetType="{x:Type local:BundleEditor}">
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type local:BundleEditor}">
@@ -79,6 +80,19 @@
                         </ctrl:FrostyDockablePanel>
                         
 
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>-->
+    
+    <!--New BundleEditor-->
+    <Style TargetType="{x:Type local:BundleEditor}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type local:BundleEditor}">
+                    <Grid Background="Aqua">
+                        <windows:BundleEditorWindow x:Name="BundleEditor" IsEnabled="True"/>
                     </Grid>
                 </ControlTemplate>
             </Setter.Value>
