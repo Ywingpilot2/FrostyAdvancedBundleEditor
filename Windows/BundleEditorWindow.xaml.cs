@@ -380,7 +380,11 @@ namespace AdvancedBundleEditorPlugin.Windows
 
         private void AddBundleButton_OnClick(object sender, RoutedEventArgs e)
         {
-            App.Logger.LogError("TODO:");
+            AddBundleArgs args = new AddBundleArgs();
+            var result = BundleEditorPromptWindow.Show(args, "Add Bundle");
+            if (result != MessageBoxResult.OK) return;
+
+            App.AssetManager.AddBundle(args.Name, args.Type, App.AssetManager.GetSuperBundleId(args.SuperBundle));
         }
 
         #endregion
@@ -396,5 +400,12 @@ namespace AdvancedBundleEditorPlugin.Windows
         #endregion
 
         #endregion
+    }
+    
+    public class AddBundleArgs
+    {
+        public string Name { get; set; } = "";
+        public string SuperBundle { get; set; } = "";
+        public BundleType Type { get; set; }
     }
 }

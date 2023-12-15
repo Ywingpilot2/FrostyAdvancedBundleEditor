@@ -176,90 +176,89 @@
         </Border>
         
         <!--Header with buttons-->
-        <Border Grid.Row="0" BorderBrush="{StaticResource SubItemPressed}" BorderThickness="1">
-            <Border BorderBrush="{StaticResource SubMenuItemHighlight}" 
-                    BorderThickness="0, 1, 0, 1">
-                <Grid Background="{StaticResource ControlBackground}">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition />
-                        <ColumnDefinition />
-                        <ColumnDefinition Width="35" />
-                    </Grid.ColumnDefinitions>
+        <Border Grid.Row="0" 
+                BorderBrush="{StaticResource SubMenuItemHighlight}" 
+                BorderThickness="0, 1, 0, 1">
+            <Grid Background="{StaticResource ControlBackground}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition />
+                    <ColumnDefinition />
+                    <ColumnDefinition Width="35" />
+                </Grid.ColumnDefinitions>
 
-                    <!--Buttons-->
-                    <StackPanel Grid.Column="0" Orientation="Horizontal" RenderOptions.EdgeMode="Aliased">
-                        <Button x:Name="AddButton"
-                                Width="26"
-                                Height="26"
-                                Margin="4,0,2,0"
-                                HorizontalAlignment="Left"
-                                Click="AddButton_OnClick"
-                                ToolTip="Add an asset to the currently selected bundle">
-                            <Image Source="pack://application:,,,/FrostyEditor;component/Images/Add.png"
-                                   Width="40" />
-                        </Button>
-                        <Button x:Name="RemoveButton"
-                                Width="26"
-                                Height="26"
-                                Margin="2,0,4,0"
-                                HorizontalAlignment="Left"
-                                Click="RemoveButton_OnClick"
-                                ToolTip="Remove an asset from the currently selected bundle">
-                            <Image Source="pack://application:,,,/FrostyEditor;component/Images/Remove.png"
-                                   Width="40" />
-                        </Button>
+                <!--Buttons-->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" RenderOptions.EdgeMode="Aliased">
+                    <Button x:Name="AddButton"
+                            Width="26"
+                            Height="26"
+                            Margin="4,0,2,0"
+                            HorizontalAlignment="Left"
+                            Click="AddButton_OnClick"
+                            ToolTip="Add an asset to the currently selected bundle">
+                        <Image Source="pack://application:,,,/FrostyEditor;component/Images/Add.png"
+                               Width="40" />
+                    </Button>
+                    <Button x:Name="RemoveButton"
+                            Width="26"
+                            Height="26"
+                            Margin="2,0,4,0"
+                            HorizontalAlignment="Left"
+                            Click="RemoveButton_OnClick"
+                            ToolTip="Remove an asset from the currently selected bundle">
+                        <Image Source="pack://application:,,,/FrostyEditor;component/Images/Remove.png"
+                               Width="40" />
+                    </Button>
                         
-                        <Grid Background="{StaticResource SubMenuItemHighlight}" Width="1" />
+                    <Grid Background="{StaticResource SubMenuItemHighlight}" Width="1" />
                         
-                        <Button x:Name="RecAddButton"
-                                Width="26"
-                                Height="26"
-                                Margin="4,0,2,0"
-                                HorizontalAlignment="Left"
-                                Click="RecAddButton_OnClick"
-                                ToolTip="Recursively add the selected asset and its references to the bundle">
-                            <Image Source="pack://application:,,,/FrostyEditor;component/Images/Import.png"
-                                   Width="40" />
-                        </Button>
-                        <Button x:Name="RecRemoveButton"
-                                Width="26"
-                                Height="26"
-                                Margin="2,0,4,0"
-                                HorizontalAlignment="Left"
-                                Click="RecRemoveButton_OnClick"
-                                ToolTip="Recursively remove the selected asset and its references from the bundle">
-                            <Image Source="pack://application:,,,/FrostyEditor;component/Images/Export.png"
-                                   Width="40" />
-                        </Button>
+                    <Button x:Name="RecAddButton"
+                            Width="26"
+                            Height="26"
+                            Margin="4,0,2,0"
+                            HorizontalAlignment="Left"
+                            Click="RecAddButton_OnClick"
+                            ToolTip="Recursively add the selected asset and its references to the bundle">
+                        <Image Source="pack://application:,,,/FrostyEditor;component/Images/Import.png"
+                               Width="40" />
+                    </Button>
+                    <Button x:Name="RecRemoveButton"
+                            Width="26"
+                            Height="26"
+                            Margin="2,0,4,0"
+                            HorizontalAlignment="Left"
+                            Click="RecRemoveButton_OnClick"
+                            ToolTip="Recursively remove the selected asset and its references from the bundle">
+                        <Image Source="pack://application:,,,/FrostyEditor;component/Images/Export.png"
+                               Width="40" />
+                    </Button>
                         
-                        <Grid Background="{StaticResource SubMenuItemHighlight}" Width="1" />
+                    <Grid Background="{StaticResource SubMenuItemHighlight}" Width="1" />
                         
-                        <Button x:Name="AddBundleButton"
-                                Width="24"
-                                Height="24"
-                                Margin="4,0,2,0"
-                                HorizontalAlignment="Left"
-                                Click="AddBundleButton_OnClick"
-                                ToolTip="Add a new bundle">
-                            <Image Source="pack://application:,,,/FrostyEditor;component/Images/AddFolder.png"
-                                   Width="30" />
-                        </Button>
+                    <Button x:Name="AddBundleButton"
+                            Width="24"
+                            Height="24"
+                            Margin="4,0,2,0"
+                            HorizontalAlignment="Left"
+                            Click="AddBundleButton_OnClick"
+                            ToolTip="Add a new bundle">
+                        <Image Source="pack://application:,,,/FrostyEditor;component/Images/AddFolder.png"
+                               Width="30" />
+                    </Button>
                         
-                        <Grid Background="{StaticResource SubMenuItemHighlight}" Width="1" />
+                    <Grid Background="{StaticResource SubMenuItemHighlight}" Width="1" />
                         
-                        <Button x:Name="BunOpButton"
-                                Width="26"
-                                Height="26"
-                                Margin="4,0,2,0"
-                                HorizontalAlignment="Left"
-                                Click="BunOpButton_OnClick"
-                                ToolTip="Run a bundle operation">
-                            <Image Source="pack://application:,,,/FrostyEditor;component/Images/Compile.png"
-                                   Width="35" />
-                        </Button>
-                    </StackPanel>
-                </Grid>
-            </Border>
+                    <Button x:Name="BunOpButton"
+                            Width="26"
+                            Height="26"
+                            Margin="4,0,2,0"
+                            HorizontalAlignment="Left"
+                            Click="BunOpButton_OnClick"
+                            ToolTip="Run a bundle operation">
+                        <Image Source="pack://application:,,,/FrostyEditor;component/Images/Compile.png"
+                               Width="35" />
+                    </Button>
+                </StackPanel>
+            </Grid>
         </Border>
     </Grid>
 </UserControl>
