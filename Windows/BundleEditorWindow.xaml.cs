@@ -13,7 +13,7 @@ namespace AdvancedBundleEditorPlugin.Windows
 {
     public partial class BundleEditorWindow : UserControl
     {
-        private BundleEntry currentBundle;
+        public static BundleEntry CurrentBundle;
         public BundleEditorWindow()
         {
             InitializeComponent();
@@ -59,19 +59,19 @@ namespace AdvancedBundleEditorPlugin.Windows
 
             SharedBundlesList.SelectionChanged += (sender, args) =>
             {
-                currentBundle = SharedBundlesList.SelectedItem as BundleEntry;
+                CurrentBundle = SharedBundlesList.SelectedItem as BundleEntry;
                 RefreshEbxExplorer();
                 RefreshResExplorer();
             };
             SublevelBundlesList.SelectionChanged += (sender, args) =>
             {
-                currentBundle = SublevelBundlesList.SelectedItem as BundleEntry;
+                CurrentBundle = SublevelBundlesList.SelectedItem as BundleEntry;
                 RefreshEbxExplorer();
                 RefreshResExplorer();
             };
             BlueprintBundlesList.SelectionChanged += (sender, args) =>
             {
-                currentBundle = BlueprintBundlesList.SelectedItem as BundleEntry;
+                CurrentBundle = BlueprintBundlesList.SelectedItem as BundleEntry;
                 RefreshEbxExplorer();
                 RefreshResExplorer();
             };
@@ -87,16 +87,16 @@ namespace AdvancedBundleEditorPlugin.Windows
 
         private void RefreshEbxExplorer()
         {
-            if (currentBundle == null) return;
+            if (CurrentBundle == null) return;
 
-            AssetDataExplorer.ItemsSource = App.AssetManager.EnumerateEbx(currentBundle);
+            AssetDataExplorer.ItemsSource = App.AssetManager.EnumerateEbx(CurrentBundle);
         }
         
         private void RefreshResExplorer()
         {
-            if (currentBundle == null) return;
+            if (CurrentBundle == null) return;
 
-            ResDataExplorer.ItemsSource = App.AssetManager.EnumerateRes(currentBundle);
+            ResDataExplorer.ItemsSource = App.AssetManager.EnumerateRes(CurrentBundle);
         }
 
         #endregion
@@ -133,7 +133,7 @@ namespace AdvancedBundleEditorPlugin.Windows
         private void AddButton_OnClick(object sender, RoutedEventArgs e)
         {
             EbxAssetEntry entry = App.EditorWindow.DataExplorer.SelectedAsset as EbxAssetEntry;
-            if (entry == null || currentBundle == null) return;
+            if (entry == null || CurrentBundle == null) return;
 
             //Lazy way to support multi select and also not needing PluginM
             List<AssetEntry> selectedAssets = new List<AssetEntry> { entry }; //If we only have 1 asset selected we just want 1 item in the list
@@ -147,25 +147,25 @@ namespace AdvancedBundleEditorPlugin.Windows
                 foreach (EbxAssetEntry selectedAsset in selectedAssets) 
                 {
                     //Check to see if this bundle already has our asset
-                    if (!selectedAsset.Bundles.Contains(App.AssetManager.GetBundleId(currentBundle)) && !selectedAsset.AddedBundles.Contains(App.AssetManager.GetBundleId(currentBundle)))
+                    if (!selectedAsset.Bundles.Contains(App.AssetManager.GetBundleId(CurrentBundle)) && !selectedAsset.AddedBundles.Contains(App.AssetManager.GetBundleId(CurrentBundle)))
                     {
-                        BundleEditors.AddAssetToBundle(selectedAsset, currentBundle);
+                        BundleEditors.AddAssetToBundle(selectedAsset, CurrentBundle);
 
                         //We also need to check if its networked
-                        if (BundleEditors.AssetAddNetworkValid(selectedAsset, currentBundle))
+                        if (BundleEditors.AssetAddNetworkValid(selectedAsset, CurrentBundle))
                         {
-                            BundleEditors.AddAssetToNetRegs(selectedAsset, currentBundle);
+                            BundleEditors.AddAssetToNetRegs(selectedAsset, CurrentBundle);
                         }
                         //If not, check if its a mesh object
-                        else if (BundleEditors.AssetAddMeshVariationValid(selectedAsset, currentBundle))
+                        else if (BundleEditors.AssetAddMeshVariationValid(selectedAsset, CurrentBundle))
                         {
-                            BundleEditors.AddAssetToMvdBs(selectedAsset, currentBundle, task);
+                            BundleEditors.AddAssetToMvdBs(selectedAsset, CurrentBundle, task);
                         }
                     }
 
                     else
                     {
-                        App.Logger.LogError("Asset is already in {0}", currentBundle.Name);
+                        App.Logger.LogError("Asset is already in {0}", CurrentBundle.Name);
                     }
                 }
             });
@@ -179,7 +179,7 @@ namespace AdvancedBundleEditorPlugin.Windows
         private void RemoveButton_OnClick(object sender, RoutedEventArgs e)
         {
             EbxAssetEntry entry = App.EditorWindow.DataExplorer.SelectedAsset as EbxAssetEntry;
-            if (entry == null || currentBundle == null) return;
+            if (entry == null || CurrentBundle == null) return;
             
             //Lazy way to support multi select and also not needing PluginM
             List<AssetEntry> selectedAssets = new List<AssetEntry> { entry }; //If we only have 1 asset selected we just want 1 item in the list
@@ -192,23 +192,23 @@ namespace AdvancedBundleEditorPlugin.Windows
             {
                 foreach (EbxAssetEntry assetEntry in selectedAssets)
                 {
-                    if (assetEntry.AddedBundles.Contains(App.AssetManager.GetBundleId(currentBundle)))
+                    if (assetEntry.AddedBundles.Contains(App.AssetManager.GetBundleId(CurrentBundle)))
                     {
-                        BundleEditors.RemoveAssetFromBundle(assetEntry, currentBundle);
+                        BundleEditors.RemoveAssetFromBundle(assetEntry, CurrentBundle);
 
-                        if (BundleEditors.AssetRemNetworkValid(assetEntry, currentBundle))
+                        if (BundleEditors.AssetRemNetworkValid(assetEntry, CurrentBundle))
                         {
-                            BundleEditors.RemoveAssetFromNetRegs(assetEntry, currentBundle);
+                            BundleEditors.RemoveAssetFromNetRegs(assetEntry, CurrentBundle);
                         }
-                        else if (BundleEditors.AssetRemMeshVariationValid(assetEntry, currentBundle))
+                        else if (BundleEditors.AssetRemMeshVariationValid(assetEntry, CurrentBundle))
                         {
-                            BundleEditors.RemoveAssetFromMeshVariations(assetEntry, currentBundle);
+                            BundleEditors.RemoveAssetFromMeshVariations(assetEntry, CurrentBundle);
                         }
                     }
 
                     else
                     {
-                        App.Logger.LogError("{0} cannot be removed from this asset, are you sure its an added bundle?", currentBundle.Name);
+                        App.Logger.LogError("{0} cannot be removed from this asset, are you sure its an added bundle?", CurrentBundle.Name);
                     }
                 }
             });
@@ -224,7 +224,7 @@ namespace AdvancedBundleEditorPlugin.Windows
         private void RecAddButton_OnClick(object sender, RoutedEventArgs e)
         {
             EbxAssetEntry entry = App.EditorWindow.DataExplorer.SelectedAsset as EbxAssetEntry;
-            if (entry == null || currentBundle == null) return;
+            if (entry == null || CurrentBundle == null) return;
             
             //Lazy way to support multi select and also not needing PluginM
             List<AssetEntry> selectedAssets = new List<AssetEntry> { entry }; //If we only have 1 asset selected we just want 1 item in the list
@@ -256,20 +256,20 @@ namespace AdvancedBundleEditorPlugin.Windows
                             assetToCheck = App.AssetManager.GetEbxEntry(assetsToCheck[0]); //Get what is next in line to be checked
                             task.Update($"Adding {assetToCheck.DisplayName} to Bundle");
 
-                            if (BundleEditors.AssetRecAddValid(assetToCheck, currentBundle) && assetToCheck.Type != "ShaderGraph") //Now check if its valid
+                            if (BundleEditors.AssetRecAddValid(assetToCheck, CurrentBundle) && assetToCheck.Type != "ShaderGraph") //Now check if its valid
                             {
                                 addedCount++;
                                 //If it is, add it to bundles and netregs
-                                BundleEditors.AddAssetToBundle(assetToCheck, currentBundle);
+                                BundleEditors.AddAssetToBundle(assetToCheck, CurrentBundle);
 
-                                if (BundleEditors.AssetAddNetworkValid(assetToCheck, currentBundle))
+                                if (BundleEditors.AssetAddNetworkValid(assetToCheck, CurrentBundle))
                                 {
                                     task.Update($"Adding {assetToCheck.DisplayName} to Net Registry");
-                                    BundleEditors.AddAssetToNetRegs(assetToCheck, currentBundle);
+                                    BundleEditors.AddAssetToNetRegs(assetToCheck, CurrentBundle);
                                 }
-                                else if (BundleEditors.AssetAddMeshVariationValid(assetToCheck, currentBundle))
+                                else if (BundleEditors.AssetAddMeshVariationValid(assetToCheck, CurrentBundle))
                                 {
-                                    BundleEditors.AddAssetToMvdBs(assetToCheck, currentBundle, task);
+                                    BundleEditors.AddAssetToMvdBs(assetToCheck, CurrentBundle, task);
                                 }
                             } 
                             else if (assetToCheck.Type == "ShaderGraph")
@@ -287,7 +287,6 @@ namespace AdvancedBundleEditorPlugin.Windows
                             assetsToCheck.Remove(assetsToCheck[0]);
                         }
                     }
-
                 }
 
                 App.Logger.Log("I have added {0} assets out of {1} found referenced. With {2} not being added due to an error.", addedCount.ToString(), foundCount.ToString(), errorCount.ToString());
@@ -300,7 +299,7 @@ namespace AdvancedBundleEditorPlugin.Windows
         private void RecRemoveButton_OnClick(object sender, RoutedEventArgs e)
         {
             EbxAssetEntry entry = App.EditorWindow.DataExplorer.SelectedAsset as EbxAssetEntry;
-            if (entry == null || currentBundle == null) return;
+            if (entry == null || CurrentBundle == null) return;
             
             List<AssetEntry> SelectedAssets = new List<AssetEntry> { entry };
             if (App.EditorWindow.DataExplorer.SelectedAssets != null)
@@ -331,25 +330,25 @@ namespace AdvancedBundleEditorPlugin.Windows
                             assetToCheck = App.AssetManager.GetEbxEntry(assetsToCheck[0]); //Get what is next in line to be checked in
                             task.Update($"Removing {assetToCheck.DisplayName} from Bundle");
 
-                            if (BundleEditors.AssetRecRemValid(assetToCheck, currentBundle) && assetToCheck.Type != "ShaderGraph") //Now check if its valid
+                            if (BundleEditors.AssetRecRemValid(assetToCheck, CurrentBundle) && assetToCheck.Type != "ShaderGraph") //Now check if its valid
                             {
                                 addedCount++;
                                 //If it is, add it to bundles and netregs
-                                BundleEditors.RemoveAssetFromBundle(assetToCheck, currentBundle);
+                                BundleEditors.RemoveAssetFromBundle(assetToCheck, CurrentBundle);
 
-                                if (BundleEditors.AssetRemNetworkValid(assetToCheck, currentBundle))
+                                if (BundleEditors.AssetRemNetworkValid(assetToCheck, CurrentBundle))
                                 {
                                     task.Update($"Removing {assetToCheck.DisplayName} from Net Registry");
-                                    BundleEditors.RemoveAssetFromNetRegs(assetToCheck, currentBundle);
+                                    BundleEditors.RemoveAssetFromNetRegs(assetToCheck, CurrentBundle);
                                 }
-                                else if (BundleEditors.AssetRemMeshVariationValid(assetToCheck, currentBundle))
+                                else if (BundleEditors.AssetRemMeshVariationValid(assetToCheck, CurrentBundle))
                                 {
                                     task.Update($"Removing {assetToCheck.DisplayName} from Mesh Variation");
-                                    BundleEditors.RemoveAssetFromMeshVariations(assetToCheck, currentBundle);
+                                    BundleEditors.RemoveAssetFromMeshVariations(assetToCheck, CurrentBundle);
                                 }
                             }
                             //We should probably create an unsupported list instead, but 
-                            else if (assetToCheck.Type == "ShaderGraph" || !assetToCheck.AddedBundles.Contains(App.AssetManager.GetBundleId(currentBundle)))
+                            else if (assetToCheck.Type == "ShaderGraph" || !assetToCheck.AddedBundles.Contains(App.AssetManager.GetBundleId(CurrentBundle)))
                             {
                                 App.Logger.LogError("Couldn't add {0}", assetToCheck.Name);
                                 errorCount++;

@@ -785,13 +785,14 @@ namespace AdvancedBundleEditorPlugin
         private static List<string> mvdbBundles = new List<string>();
         private static List<EbxAsset> mvdbs = new List<EbxAsset>();
 
-        public static bool hasTextureParams = true; //If false that means the game doesn't have texture params
-        public static bool hasSurfaceGuidSetup = false; //If true the game has extra fields for setting things like SurfaceShaderId or SurfaceShaderGuid
-        public static bool hasMaterialId = false; //Only used by swbf2 afaik, whether or not Materials have a MaterialId field
-        public static bool hasUnlockIdTable = false;
+        public static bool HasTextureParams = true; //If false that means the game doesn't have texture params
+        public static bool HasSurfaceGuidSetup = false; //If true the game has extra fields for setting things like SurfaceShaderId or SurfaceShaderGuid
+        public static bool HasMaterialId = false; //Only used by swbf2 afaik, whether or not Materials have a MaterialId field
+        public static bool HasUnlockIdTable = false;
+        public static bool HasSuperBundles = true;
 
-        public static Dictionary<string, AddToBundleExtension> addToBundleExtensions = new Dictionary<string, AddToBundleExtension>();
-        public static Dictionary<string, RemoveFromBundleExtension> removeFromBundleExtensions = new Dictionary<string, RemoveFromBundleExtension>();
+        public static Dictionary<string, AddToBundleExtension> AddToBundleExtensions = new Dictionary<string, AddToBundleExtension>();
+        public static Dictionary<string, RemoveFromBundleExtension> RemoveFromBundleExtensions = new Dictionary<string, RemoveFromBundleExtension>();
 
         static BundleEditors()
         {
@@ -802,16 +803,16 @@ namespace AdvancedBundleEditorPlugin
                 if (type.IsSubclassOf(typeof(AddToBundleExtension)))
                 {
                     var extension = (AddToBundleExtension)Activator.CreateInstance(type);
-                    addToBundleExtensions.Add(extension.AssetType, extension);
+                    AddToBundleExtensions.Add(extension.AssetType, extension);
                 }
                 else if (type.IsSubclassOf(typeof(RemoveFromBundleExtension)))
                 {
                     var extension = (RemoveFromBundleExtension)Activator.CreateInstance(type);
-                    removeFromBundleExtensions.Add(extension.AssetType, extension);
+                    RemoveFromBundleExtensions.Add(extension.AssetType, extension);
                 }
             }
-            addToBundleExtensions.Add("null", new AddToBundleExtension());
-            removeFromBundleExtensions.Add("null", new RemoveFromBundleExtension());
+            AddToBundleExtensions.Add("null", new AddToBundleExtension());
+            RemoveFromBundleExtensions.Add("null", new RemoveFromBundleExtension());
 
             #region --Cache reading--
             //Read the cache file
@@ -885,7 +886,7 @@ namespace AdvancedBundleEditorPlugin
                     case (int)ProfileVersion.Anthem:
                     case (int)ProfileVersion.Battlefield1:
                         {
-                            hasTextureParams = false;
+                            HasTextureParams = false;
                             break;
                         }
                 }
@@ -901,7 +902,7 @@ namespace AdvancedBundleEditorPlugin
                     case (int)ProfileVersion.StarWarsSquadrons:
                     case (int)ProfileVersion.StarWarsBattlefrontII:
                         {
-                            hasSurfaceGuidSetup = true;
+                            HasSurfaceGuidSetup = true;
                             break;
                         }
                 }
@@ -909,7 +910,7 @@ namespace AdvancedBundleEditorPlugin
                 {
                     case (int)ProfileVersion.StarWarsBattlefrontII:
                         {
-                            hasMaterialId = true;
+                            HasMaterialId = true;
                             break;
                         }
                 }
@@ -935,10 +936,24 @@ namespace AdvancedBundleEditorPlugin
                 case (int)ProfileVersion.NeedForSpeedPayback:
                 case (int)ProfileVersion.Battlefield5:
                     {
-                        hasUnlockIdTable = true;
+                        HasUnlockIdTable = true;
                         break;
                     }
             }
+            #endregion
+
+            #region --Super Bundles--
+
+            switch (ProfilesLibrary.DataVersion)
+            {
+                case (int)ProfileVersion.Battlefield5:
+                case (int)ProfileVersion.StarWarsSquadrons:
+                case (int)ProfileVersion.StarWarsBattlefrontII:
+                {
+                    HasSuperBundles = false;
+                } break;
+            }
+
             #endregion
 
             App.Logger.Log("Done!");
@@ -949,58 +964,60 @@ namespace AdvancedBundleEditorPlugin
         /// <summary>
         /// Adds an asset to a bundle with all associated data(E.G chunks, res, if it has any).
         /// </summary>
-        /// <param name="AssetToBundle">Asset to add</param>
-        /// <param name="SelectedBundle">Bundle to add to</param>
-        public static void AddAssetToBundle(EbxAssetEntry AssetToBundle, BundleEntry SelectedBundle)
+        /// <param name="assetToBundle">Asset to add</param>
+        /// <param name="selectedBundle">Bundle to add to</param>
+        public static void AddAssetToBundle(EbxAssetEntry assetToBundle, BundleEntry selectedBundle)
         {
-            EbxAsset ebx = App.AssetManager.GetEbx(AssetToBundle);
-            App.AssetManager.ModifyEbx(AssetToBundle.Name, ebx);
+            EbxAsset ebx = App.AssetManager.GetEbx(assetToBundle);
+            App.AssetManager.ModifyEbx(assetToBundle.Name, ebx);
 
-            string key = AssetToBundle.Type;
-            if (!addToBundleExtensions.ContainsKey(AssetToBundle.Type))
+            string key = assetToBundle.Type;
+            if (!AddToBundleExtensions.ContainsKey(assetToBundle.Type))
             {
                 key = "null";
-                foreach (string typekey in addToBundleExtensions.Keys)
+                foreach (string typekey in AddToBundleExtensions.Keys)
                 {
-                    if (TypeLibrary.IsSubClassOf(AssetToBundle.Type, typekey))
+                    if (TypeLibrary.IsSubClassOf(assetToBundle.Type, typekey))
                     {
                         key = typekey;
                         break;
                     }
                 }
             }
-            addToBundleExtensions[key].AddToBundle(AssetToBundle, SelectedBundle);
+            AddToBundleExtensions[key].AddToBundle(assetToBundle, selectedBundle);
         }
 
         /// <summary>
         /// Adds an asset to a network registry and UnlockIdTable if it is a subtype of UnlockBaseAsset
         /// </summary>
-        /// <param name="AssetToBundle"></param>
-        /// <param name="SelectedBundle"></param>
-        public static void AddAssetToNetRegs(EbxAssetEntry AssetToBundle, BundleEntry SelectedBundle)
+        /// <param name="assetToBundle"></param>
+        /// <param name="selectedBundle"></param>
+        public static void AddAssetToNetRegs(EbxAssetEntry assetToBundle, BundleEntry selectedBundle)
         {
-            EbxAsset ebx = App.AssetManager.GetEbx(AssetToBundle);
+            EbxAsset ebx = App.AssetManager.GetEbx(assetToBundle);
             List<object> ebxObjects = ebx.Objects.ToList();
 
-            if (!SelectedBundle.Added)
+            if (!selectedBundle.Added)
             {
-                EbxAsset netRegEbx = networkRegistries[networkedBundles.IndexOf(SelectedBundle.Name)];
+                EbxAsset netRegEbx = networkRegistries[networkedBundles.IndexOf(selectedBundle.Name)];
                 List<PointerRef> objects = ((dynamic)netRegEbx.RootObject).Objects;
 
                 foreach (object obj in ebxObjects)
                 {
-                    if (networkedTypes.Contains(obj.GetType().Name))
+                    PointerRef pointer = new PointerRef(new EbxImportReference()
+                        { FileGuid = assetToBundle.Guid, ClassGuid = ((dynamic)obj).GetInstanceGuid().ExportedGuid });
+                    if (networkedTypes.Contains(obj.GetType().Name) && !objects.Contains(pointer))
                     {
-                        objects.Add(new PointerRef(new EbxImportReference() { FileGuid = AssetToBundle.Guid, ClassGuid = ((dynamic)obj).GetInstanceGuid().ExportedGuid }));
+                        objects.Add(pointer);
                     }
                 }
 
-                netRegEbx.AddDependency(AssetToBundle.Guid);
+                netRegEbx.AddDependency(assetToBundle.Guid);
                 App.AssetManager.ModifyEbx(App.AssetManager.GetEbxEntry(netRegEbx.FileGuid).Name, netRegEbx);
             }
             else
             {
-                foreach (EbxAssetEntry networkRegistry in App.AssetManager.EnumerateEbx(SelectedBundle))
+                foreach (EbxAssetEntry networkRegistry in App.AssetManager.EnumerateEbx(selectedBundle))
                 {
                     if (networkRegistry.Type == "NetworkRegistryAsset")
                     {
@@ -1009,13 +1026,17 @@ namespace AdvancedBundleEditorPlugin
 
                         foreach (object obj in ebxObjects)
                         {
-                            if (networkedTypes.Contains(obj.GetType().Name))
+                            PointerRef pointer = new PointerRef(new EbxImportReference()
                             {
-                                objects.Add(new PointerRef(new EbxImportReference() { FileGuid = AssetToBundle.Guid, ClassGuid = ((dynamic)obj).GetInstanceGuid().ExportedGuid }));
+                                FileGuid = assetToBundle.Guid, ClassGuid = ((dynamic)obj).GetInstanceGuid().ExportedGuid
+                            });
+                            if (networkedTypes.Contains(obj.GetType().Name) && !objects.Contains(pointer))
+                            {
+                                objects.Add(pointer);
                             }
                         }
 
-                        netRegEbx.AddDependency(AssetToBundle.Guid);
+                        netRegEbx.AddDependency(assetToBundle.Guid);
                         App.AssetManager.ModifyEbx(App.AssetManager.GetEbxEntry(netRegEbx.FileGuid).Name, netRegEbx);
                     }
                 }
@@ -1025,10 +1046,10 @@ namespace AdvancedBundleEditorPlugin
         /// <summary>
         /// Adds an asset to a Mesh Variation Database
         /// </summary>
-        /// <param name="AssetToBundle"></param>
-        /// <param name="SelectedBundle"></param>
+        /// <param name="assetToBundle"></param>
+        /// <param name="selectedBundle"></param>
         /// <param name="task">Requires a stupid task window because cache loading requires it</param>
-        public static void AddAssetToMvdBs(EbxAssetEntry AssetToBundle, BundleEntry SelectedBundle, FrostyTaskWindow task = null)
+        public static void AddAssetToMvdBs(EbxAssetEntry assetToBundle, BundleEntry selectedBundle, FrostyTaskWindow task = null)
         {
             //Make sure the MVDB cache is loaded
             if (!MeshVariationDb.IsLoaded)
@@ -1038,17 +1059,17 @@ namespace AdvancedBundleEditorPlugin
 
             task?.Update("Adding to MVDB...");
 
-            EbxAsset ebxToBundle = App.AssetManager.GetEbx(AssetToBundle);
+            EbxAsset ebxToBundle = App.AssetManager.GetEbx(assetToBundle);
 
             EbxAsset mvdb = null; //Its possible we maybe working with a duped bundle and MVDB, if thats the case, we cannot use cache.
-            if (!SelectedBundle.Added)
+            if (!selectedBundle.Added)
             {
-                mvdb = mvdbs[mvdbBundles.IndexOf(SelectedBundle.Name)];
+                mvdb = mvdbs[mvdbBundles.IndexOf(selectedBundle.Name)];
             }
             else
             {
                 //Extremely unoptimized way of brute forcing our way to the MVDB
-                foreach (EbxAssetEntry assetEntry in App.AssetManager.EnumerateEbx(SelectedBundle))
+                foreach (EbxAssetEntry assetEntry in App.AssetManager.EnumerateEbx(selectedBundle))
                 {
                     if (assetEntry.Type == "MeshVariationDatabase")
                     {
@@ -1059,7 +1080,7 @@ namespace AdvancedBundleEditorPlugin
             }
             if (mvdb == null) return;
             dynamic mvdbObject = mvdb.RootObject as dynamic;
-            dynamic newMVEntry = TypeLibrary.CreateObject("MeshVariationDatabaseEntry"); //Create a new entry for us to add to the MVDB
+            dynamic newMvEntry = TypeLibrary.CreateObject("MeshVariationDatabaseEntry"); //Create a new entry for us to add to the MVDB
 
             //This is the fastest way I could think of to do this
             //If someone reads this please find a better way to do this!
@@ -1071,7 +1092,7 @@ namespace AdvancedBundleEditorPlugin
                 {
                     default: //A mesh asset
                         {
-                            newMVEntry.Mesh = new PointerRef(new EbxImportReference() { FileGuid = AssetToBundle.Guid, ClassGuid = ebxToBundle.RootInstanceGuid });
+                            newMvEntry.Mesh = new PointerRef(new EbxImportReference() { FileGuid = assetToBundle.Guid, ClassGuid = ebxToBundle.RootInstanceGuid });
                             break;
                         }
                     case ("ObjectVariation"): //A variation of an object
@@ -1087,21 +1108,21 @@ namespace AdvancedBundleEditorPlugin
                             }
                             else //If not, its probably duped and should follow our rules
                             {
-                                if (Guid.TryParse(AssetToBundle.DisplayName.Split('_').ToList().First(), out Guid originalMeshGuid))
+                                if (Guid.TryParse(assetToBundle.DisplayName.Split('_').ToList().First(), out Guid originalMeshGuid))
                                 {
                                     meshAsset = RootInstanceEbxEntryDb.GetEbxEntryByRootInstanceGuid(originalMeshGuid);
                                 }
                                 else
                                 {
-                                    App.Logger.LogWarning("Cannot find mesh asset associated to {0}, are you sure the name of the variation is formatted correctly(`GuidOfMeshHere`_`NameOfVariationHere`)?", AssetToBundle.DisplayName);
+                                    App.Logger.LogWarning("Cannot find mesh asset associated to {0}, are you sure the name of the variation is formatted correctly(`GuidOfMeshHere`_`NameOfVariationHere`)?", assetToBundle.DisplayName);
                                 }
                             }
 
                             //References
                             if (meshAsset != null)
                             {
-                                newMVEntry.Mesh = new PointerRef(new EbxImportReference() { FileGuid = meshAsset.Guid, ClassGuid = App.AssetManager.GetEbx(meshAsset).RootInstanceGuid });
-                                newMVEntry.VariationAssetNameHash = (uint)objectVariation.NameHash;
+                                newMvEntry.Mesh = new PointerRef(new EbxImportReference() { FileGuid = meshAsset.Guid, ClassGuid = App.AssetManager.GetEbx(meshAsset).RootInstanceGuid });
+                                newMvEntry.VariationAssetNameHash = (uint)objectVariation.NameHash;
                             }
 
                             break;
@@ -1111,13 +1132,13 @@ namespace AdvancedBundleEditorPlugin
                             dynamic meshMaterial = obj as dynamic;
                             dynamic newMaterialEntry = TypeLibrary.CreateObject("MeshVariationDatabaseMaterial"); //Create a new material object
 
-                            newMaterialEntry.Material = new PointerRef(new EbxImportReference() { FileGuid = AssetToBundle.Guid, ClassGuid = meshMaterial.GetInstanceGuid().ExportedGuid });
+                            newMaterialEntry.Material = new PointerRef(new EbxImportReference() { FileGuid = assetToBundle.Guid, ClassGuid = meshMaterial.GetInstanceGuid().ExportedGuid });
 
-                            if (hasTextureParams) //Check if it has texture params before meddling with them
+                            if (HasTextureParams) //Check if it has texture params before meddling with them
                             {
-                                if (MeshVariationDb.GetVariations(AssetToBundle.Guid) != null) //Check if cache is an option. If not the entry is duped(probably)
+                                if (MeshVariationDb.GetVariations(assetToBundle.Guid) != null) //Check if cache is an option. If not the entry is duped(probably)
                                 {
-                                    MeshVariation refVariation = MeshVariationDb.GetVariations(AssetToBundle.Guid).Variations[0];
+                                    MeshVariation refVariation = MeshVariationDb.GetVariations(assetToBundle.Guid).Variations[0];
                                     foreach (MeshVariationMaterial mvm in refVariation.Materials) // For each material in the original assets MVDB Entry
                                     {
                                         if (mvm.MaterialGuid == meshMaterial.GetInstanceGuid().ExportedGuid) // If it has the same guid
@@ -1137,13 +1158,13 @@ namespace AdvancedBundleEditorPlugin
                                 }
                                 else //May as well just log a warning to the user in this event
                                 {
-                                    App.Logger.LogWarning("I am Unable to find any texture parameters for {0}, did you forget to add them to the mesh?", AssetToBundle.DisplayName);
+                                    App.Logger.LogWarning("I am Unable to find any texture parameters for {0}, did you forget to add them to the mesh?", assetToBundle.DisplayName);
                                 }
                             }
 
-                            if (hasSurfaceGuidSetup)
+                            if (HasSurfaceGuidSetup)
                             {
-                                foreach (Guid refguid in AssetToBundle.EnumerateDependencies())
+                                foreach (Guid refguid in assetToBundle.EnumerateDependencies())
                                 {
                                     if (App.AssetManager.GetEbxEntry(refguid).Type == "ShaderGraph")
                                     {
@@ -1152,7 +1173,7 @@ namespace AdvancedBundleEditorPlugin
                                     }
                                 }
                             }
-                            if (hasMaterialId)
+                            if (HasMaterialId)
                             {
                                 //Hacky way to generate a random int64
                                 using (RNGCryptoServiceProvider rng = new RNGCryptoServiceProvider())
@@ -1162,7 +1183,7 @@ namespace AdvancedBundleEditorPlugin
                                     newMaterialEntry.MaterialId = (Int64)BitConverter.ToInt64(randomBytes, 0);
                                 }
                             }
-                            newMVEntry.Materials.Add(newMaterialEntry);
+                            newMvEntry.Materials.Add(newMaterialEntry);
 
                             break;
                         }
@@ -1184,13 +1205,13 @@ namespace AdvancedBundleEditorPlugin
                             }
                             else //If not, its probably duped and should follow our rules
                             {
-                                if (Guid.TryParse(AssetToBundle.DisplayName.Split('_').ToList().First(), out Guid originalMeshGuid))
+                                if (Guid.TryParse(assetToBundle.DisplayName.Split('_').ToList().First(), out Guid originalMeshGuid))
                                 {
                                     meshAsset = RootInstanceEbxEntryDb.GetEbxEntryByRootInstanceGuid(originalMeshGuid);
                                 }
                                 else
                                 {
-                                    App.Logger.LogWarning("Cannot find mesh asset associated to {0}, are you sure the name of the variation is formatted correctly(`GuidOfMeshHere`_`NameOfVariationHere`)?", AssetToBundle.DisplayName);
+                                    App.Logger.LogWarning("Cannot find mesh asset associated to {0}, are you sure the name of the variation is formatted correctly(`GuidOfMeshHere`_`NameOfVariationHere`)?", assetToBundle.DisplayName);
                                 }
                             }
 
@@ -1201,9 +1222,9 @@ namespace AdvancedBundleEditorPlugin
                                 {
                                     dynamic newMaterialEntry = TypeLibrary.CreateObject("MeshVariationDatabaseMaterial"); //Create a new material object
                                     newMaterialEntry.Material = new PointerRef(new EbxImportReference() { FileGuid = meshAsset.Guid, ClassGuid = material.MaterialGuid });
-                                    newMaterialEntry.MaterialVariation = new PointerRef(new EbxImportReference() { FileGuid = AssetToBundle.Guid, ClassGuid = material.MaterialVariationClassGuid });
+                                    newMaterialEntry.MaterialVariation = new PointerRef(new EbxImportReference() { FileGuid = assetToBundle.Guid, ClassGuid = material.MaterialVariationClassGuid });
 
-                                    if (hasTextureParams)
+                                    if (HasTextureParams)
                                     {
                                         // We then use its texture params as the texture params in the variation
                                         foreach (dynamic texParam in (dynamic)material.TextureParameters)
@@ -1211,9 +1232,9 @@ namespace AdvancedBundleEditorPlugin
                                             newMaterialEntry.TextureParameters.Add(texParam);
                                         }
                                     }
-                                    if (hasSurfaceGuidSetup)
+                                    if (HasSurfaceGuidSetup)
                                     {
-                                        foreach (Guid refguid in AssetToBundle.EnumerateDependencies())
+                                        foreach (Guid refguid in assetToBundle.EnumerateDependencies())
                                         {
                                             if (App.AssetManager.GetEbxEntry(refguid).Type == "ShaderGraph")
                                             {
@@ -1222,7 +1243,7 @@ namespace AdvancedBundleEditorPlugin
                                             }
                                         }
                                     }
-                                    if (hasMaterialId)
+                                    if (HasMaterialId)
                                     {
                                         //Hacky way to generate a random int64
                                         using (RNGCryptoServiceProvider rng = new RNGCryptoServiceProvider())
@@ -1232,7 +1253,7 @@ namespace AdvancedBundleEditorPlugin
                                             newMaterialEntry.MaterialId = BitConverter.ToInt64(randomBytes, 0);
                                         }
                                     }
-                                    newMVEntry.Materials.Add(newMaterialEntry);
+                                    newMvEntry.Materials.Add(newMaterialEntry);
                                 }
                             }
                             else if (meshAsset != null) //its probably duped
@@ -1243,15 +1264,15 @@ namespace AdvancedBundleEditorPlugin
                                     dynamic materialVariation = ebxToBundle.Objects.ToList()[App.AssetManager.GetEbx(meshAsset).Objects.ToList().IndexOf((object)material)];
 
                                     newMaterialEntry.Material = new PointerRef(new EbxImportReference() { FileGuid = meshAsset.Guid, ClassGuid = material.GetInstanceGuid().ExportedGuid });
-                                    newMaterialEntry.MaterialVariation = new PointerRef(new EbxImportReference() { FileGuid = AssetToBundle.Guid, ClassGuid = materialVariation.GetInstanceGuid().ExportedGuid });
+                                    newMaterialEntry.MaterialVariation = new PointerRef(new EbxImportReference() { FileGuid = assetToBundle.Guid, ClassGuid = materialVariation.GetInstanceGuid().ExportedGuid });
 
-                                    if (hasTextureParams)
+                                    if (HasTextureParams)
                                     {
                                         newMaterialEntry.TextureParameters = (materialVariation).Shader.TextureParameters; //Copy the texture parameters over 
                                     }
-                                    if (hasSurfaceGuidSetup)
+                                    if (HasSurfaceGuidSetup)
                                     {
-                                        foreach (Guid refguid in AssetToBundle.EnumerateDependencies())
+                                        foreach (Guid refguid in assetToBundle.EnumerateDependencies())
                                         {
                                             if (App.AssetManager.GetEbxEntry(refguid).Type == "ShaderGraph")
                                             {
@@ -1260,7 +1281,7 @@ namespace AdvancedBundleEditorPlugin
                                             }
                                         }
                                     }
-                                    if (hasMaterialId)
+                                    if (HasMaterialId)
                                     {
                                         //Hacky way to generate a random int64
                                         using (RNGCryptoServiceProvider rng = new RNGCryptoServiceProvider())
@@ -1270,7 +1291,7 @@ namespace AdvancedBundleEditorPlugin
                                             newMaterialEntry.MaterialId = BitConverter.ToInt64(randomBytes, 0);
                                         }
                                     }
-                                    newMVEntry.Materials.Add(newMaterialEntry);
+                                    newMvEntry.Materials.Add(newMaterialEntry);
                                 }
                             }
                             break;
@@ -1278,22 +1299,22 @@ namespace AdvancedBundleEditorPlugin
                 }
             }
 
-            mvdbObject.Entries.Add(newMVEntry);
-            mvdb.AddDependency(AssetToBundle.Guid);
+            mvdbObject.Entries.Add(newMvEntry);
+            mvdb.AddDependency(assetToBundle.Guid);
             App.AssetManager.ModifyEbx(App.AssetManager.GetEbxEntry(mvdb.FileGuid).Name, mvdb);
         }
 
         /// <summary>
         /// Adds an unlock asset to a UnlockIdTable if the game has one and its a UnlockAssetBase subtype
         /// </summary>
-        /// <param name="AssetToBundle"></param>
-        /// <param name="SelectedBundle"></param>
-        public static void AddAssetToTables(EbxAssetEntry AssetToBundle, BundleEntry SelectedBundle)
+        /// <param name="assetToBundle"></param>
+        /// <param name="selectedBundle"></param>
+        public static void AddAssetToTables(EbxAssetEntry assetToBundle, BundleEntry selectedBundle)
         {
-            EbxAsset ebx = App.AssetManager.GetEbx(AssetToBundle);
-            if (SelectedBundle.Type == BundleType.SharedBundle || SelectedBundle.Type == BundleType.BlueprintBundle)
+            EbxAsset ebx = App.AssetManager.GetEbx(assetToBundle);
+            if (selectedBundle.Type == BundleType.SharedBundle || selectedBundle.Type == BundleType.BlueprintBundle)
             {
-                if (hasUnlockIdTable && TypeLibrary.IsSubClassOf(AssetToBundle.Type, "UnlockAssetBase"))
+                if (HasUnlockIdTable && TypeLibrary.IsSubClassOf(assetToBundle.Type, "UnlockAssetBase"))
                 {
                     foreach (EbxAssetEntry lAssetEntry in App.AssetManager.EnumerateEbx("LevelData"))
                     {
@@ -1309,8 +1330,8 @@ namespace AdvancedBundleEditorPlugin
             }
             
             //If its not a shared/blueprint bundle then its a sublevel
-            EbxAssetEntry lvlAssetEntry = App.AssetManager.GetEbxEntry(App.AssetManager.GetSuperBundle(SelectedBundle.SuperBundleId).Name.Remove(0, 6));
-            if (hasUnlockIdTable && TypeLibrary.IsSubClassOf(AssetToBundle.Type, "UnlockAssetBase") && lvlAssetEntry != null)
+            EbxAssetEntry lvlAssetEntry = App.AssetManager.GetEbxEntry(App.AssetManager.GetSuperBundle(selectedBundle.SuperBundleId).Name.Remove(0, 6));
+            if (HasUnlockIdTable && TypeLibrary.IsSubClassOf(assetToBundle.Type, "UnlockAssetBase") && lvlAssetEntry != null)
             {
                 EbxAsset lvlEbx = App.AssetManager.GetEbx(lvlAssetEntry);
                 uint unlockId = ((dynamic)ebx.RootObject).Identifier;
@@ -1327,66 +1348,66 @@ namespace AdvancedBundleEditorPlugin
         /// <summary>
         /// Removes an asset from a bundle
         /// </summary>
-        /// <param name="AssetToRemove"></param>
-        /// <param name="SelectedBundle"></param>
-        public static void RemoveAssetFromBundle(EbxAssetEntry AssetToRemove, BundleEntry SelectedBundle)
+        /// <param name="assetToRemove"></param>
+        /// <param name="selectedBundle"></param>
+        public static void RemoveAssetFromBundle(EbxAssetEntry assetToRemove, BundleEntry selectedBundle)
         {
-            EbxAsset ebx = App.AssetManager.GetEbx(AssetToRemove);
-            App.AssetManager.ModifyEbx(AssetToRemove.Name, ebx);
+            EbxAsset ebx = App.AssetManager.GetEbx(assetToRemove);
+            App.AssetManager.ModifyEbx(assetToRemove.Name, ebx);
 
-            string key = AssetToRemove.Type;
-            if (!removeFromBundleExtensions.ContainsKey(AssetToRemove.Type))
+            string key = assetToRemove.Type;
+            if (!RemoveFromBundleExtensions.ContainsKey(assetToRemove.Type))
             {
                 key = "null";
-                foreach (string typekey in removeFromBundleExtensions.Keys)
+                foreach (string typekey in RemoveFromBundleExtensions.Keys)
                 {
-                    if (TypeLibrary.IsSubClassOf(AssetToRemove.Type, typekey))
+                    if (TypeLibrary.IsSubClassOf(assetToRemove.Type, typekey))
                     {
                         key = typekey;
                         break;
                     }
                 }
             }
-            removeFromBundleExtensions[key].RemoveFromBundle(AssetToRemove, SelectedBundle);
+            RemoveFromBundleExtensions[key].RemoveFromBundle(assetToRemove, selectedBundle);
         }
 
         /// <summary>
         /// Removes an asset from Network Registries
         /// </summary>
-        /// <param name="AssetToRemove"></param>
-        /// <param name="SelectedBundle"></param>
-        public static void RemoveAssetFromNetRegs(EbxAssetEntry AssetToRemove, BundleEntry SelectedBundle)
+        /// <param name="assetToRemove"></param>
+        /// <param name="selectedBundle"></param>
+        public static void RemoveAssetFromNetRegs(EbxAssetEntry assetToRemove, BundleEntry selectedBundle)
         {
-            EbxAsset ebx = App.AssetManager.GetEbx(AssetToRemove);
+            EbxAsset ebx = App.AssetManager.GetEbx(assetToRemove);
             List<object> ebxObjects = ebx.Objects.ToList();
 
-            if (!SelectedBundle.Added)
+            if (!selectedBundle.Added)
             {
-                EbxAsset netRegEbx = networkRegistries[networkedBundles.IndexOf(SelectedBundle.Name)];
+                EbxAsset netRegEbx = networkRegistries[networkedBundles.IndexOf(selectedBundle.Name)];
                 List<PointerRef> objects = ((dynamic)netRegEbx.RootObject).Objects;
 
                 foreach (dynamic obj in ebxObjects)
                 {
-                    objects.Remove(new PointerRef(new EbxImportReference() { FileGuid = AssetToRemove.Guid, ClassGuid = ((dynamic)obj).GetInstanceGuid().ExportedGuid }));
+                    objects.Remove(new PointerRef(new EbxImportReference() { FileGuid = assetToRemove.Guid, ClassGuid = ((dynamic)obj).GetInstanceGuid().ExportedGuid }));
                 }
-                App.AssetManager.GetEbxEntry(netRegEbx.FileGuid).ModifiedEntry.DependentAssets.Remove(AssetToRemove.Guid);
-                App.AssetManager.ModifyEbx(AssetToRemove.Name, ebx);
+                App.AssetManager.GetEbxEntry(netRegEbx.FileGuid).ModifiedEntry.DependentAssets.Remove(assetToRemove.Guid);
+                App.AssetManager.ModifyEbx(assetToRemove.Name, ebx);
             }
             else
             {
-                foreach (EbxAssetEntry networkRegistry in App.AssetManager.EnumerateEbx(SelectedBundle))
+                foreach (EbxAssetEntry networkRegistry in App.AssetManager.EnumerateEbx(selectedBundle))
                 {
-                    if (networkRegistry.Type == "NetworkRegistryAsset" && networkRegistry.EnumerateDependencies().Contains(AssetToRemove.Guid))
+                    if (networkRegistry.Type == "NetworkRegistryAsset" && networkRegistry.EnumerateDependencies().Contains(assetToRemove.Guid))
                     {
                         EbxAsset netRegEbx = App.AssetManager.GetEbx(networkRegistry);
                         List<PointerRef> objects = ((dynamic)netRegEbx.RootObject).Objects;
 
                         foreach (dynamic obj in ebxObjects)
                         {
-                            objects.Remove(new PointerRef(new EbxImportReference() { FileGuid = AssetToRemove.Guid, ClassGuid = ((dynamic)obj).GetInstanceGuid().ExportedGuid }));
+                            objects.Remove(new PointerRef(new EbxImportReference() { FileGuid = assetToRemove.Guid, ClassGuid = ((dynamic)obj).GetInstanceGuid().ExportedGuid }));
                         }
-                        networkRegistry.ModifiedEntry.DependentAssets.Remove(AssetToRemove.Guid);
-                        App.AssetManager.ModifyEbx(AssetToRemove.Name, ebx);
+                        networkRegistry.ModifiedEntry.DependentAssets.Remove(assetToRemove.Guid);
+                        App.AssetManager.ModifyEbx(assetToRemove.Name, ebx);
                     }
                 }
             }
@@ -1395,16 +1416,16 @@ namespace AdvancedBundleEditorPlugin
         /// <summary>
         /// Removes an asset from Network Registries
         /// </summary>
-        /// <param name="AssetToRemove"></param>
-        /// <param name="SelectedBundle"></param>
-        public static void RemoveAssetFromMeshVariations(EbxAssetEntry AssetToRemove, BundleEntry SelectedBundle)
+        /// <param name="assetToRemove"></param>
+        /// <param name="selectedBundle"></param>
+        public static void RemoveAssetFromMeshVariations(EbxAssetEntry assetToRemove, BundleEntry selectedBundle)
         {
-            EbxAsset ebx = App.AssetManager.GetEbx(AssetToRemove);
+            EbxAsset ebx = App.AssetManager.GetEbx(assetToRemove);
             List<object> ebxObjects = ebx.Objects.ToList();
 
-            if (!SelectedBundle.Added)
+            if (!selectedBundle.Added)
             {
-                EbxAsset mvdbEbx = mvdbs[mvdbBundles.IndexOf(SelectedBundle.Name)];
+                EbxAsset mvdbEbx = mvdbs[mvdbBundles.IndexOf(selectedBundle.Name)];
                 dynamic mvdbObject = mvdbEbx.RootObject as dynamic;
 
                 for (int i = 0; true; i++)
@@ -1414,7 +1435,7 @@ namespace AdvancedBundleEditorPlugin
                         break;
                     }
                     dynamic entry = mvdbObject.Entries[i];
-                    if (AssetToRemove.Type != "ObjectVariation" && entry.Mesh.External.FileGuid == AssetToRemove.Guid) //We want to remove ALL entries with the mesh, including variations
+                    if (assetToRemove.Type != "ObjectVariation" && entry.Mesh.External.FileGuid == assetToRemove.Guid) //We want to remove ALL entries with the mesh, including variations
                     {
                         mvdbObject.Entries.RemoveAt(i);
                     }
@@ -1425,14 +1446,14 @@ namespace AdvancedBundleEditorPlugin
                     }
                 }
 
-                App.AssetManager.GetEbxEntry(mvdbEbx.FileGuid).ModifiedEntry.DependentAssets.Remove(AssetToRemove.Guid);
-                App.AssetManager.ModifyEbx(AssetToRemove.Name, ebx);
+                App.AssetManager.GetEbxEntry(mvdbEbx.FileGuid).ModifiedEntry.DependentAssets.Remove(assetToRemove.Guid);
+                App.AssetManager.ModifyEbx(assetToRemove.Name, ebx);
             }
             else
             {
                 foreach (EbxAssetEntry mvdbRegistry in App.AssetManager.EnumerateEbx("MeshVariationDatabase"))
                 {
-                    if (mvdbRegistry.AddedBundles[0] == App.AssetManager.GetBundleId(SelectedBundle))
+                    if (mvdbRegistry.AddedBundles[0] == App.AssetManager.GetBundleId(selectedBundle))
                     {
                         EbxAsset mvdbEbx = App.AssetManager.GetEbx(mvdbRegistry);
                         dynamic mvdbObject = mvdbEbx.RootObject as dynamic;
@@ -1444,7 +1465,7 @@ namespace AdvancedBundleEditorPlugin
                                 break;
                             }
                             dynamic entry = mvdbObject.Entries[i];
-                            if (AssetToRemove.Type != "ObjectVariation" && entry.Mesh.External.FileGuid == AssetToRemove.Guid) //We want to remove ALL entries with the mesh, including variations
+                            if (assetToRemove.Type != "ObjectVariation" && entry.Mesh.External.FileGuid == assetToRemove.Guid) //We want to remove ALL entries with the mesh, including variations
                             {
                                 mvdbObject.Entries.RemoveAt(i);
                             }
@@ -1455,8 +1476,8 @@ namespace AdvancedBundleEditorPlugin
                             }
                         }
 
-                        mvdbRegistry.ModifiedEntry.DependentAssets.Remove(AssetToRemove.Guid);
-                        App.AssetManager.ModifyEbx(AssetToRemove.Name, ebx);
+                        mvdbRegistry.ModifiedEntry.DependentAssets.Remove(assetToRemove.Guid);
+                        App.AssetManager.ModifyEbx(assetToRemove.Name, ebx);
                     }
                 }
             }
@@ -1466,13 +1487,13 @@ namespace AdvancedBundleEditorPlugin
         /// <summary>
         /// Removes an unlock asset from a UnlockIdTable if the game has them and its a UnlockAssetBase subtype
         /// </summary>
-        /// <param name="AssetToRemove"></param>
-        /// <param name="SelectedBundle"></param>
-        public static void RemoveAssetFromTables(EbxAssetEntry AssetToRemove, BundleEntry SelectedBundle)
+        /// <param name="assetToRemove"></param>
+        /// <param name="selectedBundle"></param>
+        public static void RemoveAssetFromTables(EbxAssetEntry assetToRemove, BundleEntry selectedBundle)
         {
-            EbxAsset ebx = App.AssetManager.GetEbx(AssetToRemove);
-            EbxAssetEntry lvlAssetEntry = App.AssetManager.GetEbxEntry(App.AssetManager.GetSuperBundle(SelectedBundle.SuperBundleId).Name.Remove(0, 6));
-            if (hasUnlockIdTable && TypeLibrary.IsSubClassOf(AssetToRemove.Type, "UnlockAssetBase") && lvlAssetEntry != null)
+            EbxAsset ebx = App.AssetManager.GetEbx(assetToRemove);
+            EbxAssetEntry lvlAssetEntry = App.AssetManager.GetEbxEntry(App.AssetManager.GetSuperBundle(selectedBundle.SuperBundleId).Name.Remove(0, 6));
+            if (HasUnlockIdTable && TypeLibrary.IsSubClassOf(assetToRemove.Type, "UnlockAssetBase") && lvlAssetEntry != null)
             {
                 EbxAsset lvlEbx = App.AssetManager.GetEbx(lvlAssetEntry);
                 uint unlockId = ((dynamic)ebx.RootObject).Identifier;
@@ -1490,71 +1511,65 @@ namespace AdvancedBundleEditorPlugin
         /// <summary>
         /// This will check if an asset is valid for recursive adding
         /// </summary>
-        /// <param name="AssetToCheck"></param>
-        /// <param name="BundleToCheck"></param>
+        /// <param name="assetToCheck"></param>
+        /// <param name="bundleToCheck"></param>
         /// <returns>A bool on whether or not the asset is valid</returns>
-        public static bool AssetRecAddValid(EbxAssetEntry AssetToCheck, BundleEntry BundleToCheck)
+        public static bool AssetRecAddValid(EbxAssetEntry assetToCheck, BundleEntry bundleToCheck)
         {
-            bool IsValid = false;
+            bool isValid = true;
 
-            //Enumerate over all of the bundles the asset has
-            foreach (int bunID in AssetToCheck.Bundles)
+            List<int> bundles = new List<int>(assetToCheck.Bundles);
+            bundles.AddRange(assetToCheck.AddedBundles);
+
+            foreach (int bundle in bundles)
             {
-                BundleEntry bentry = App.AssetManager.GetBundleEntry(bunID);
-
-                //If this bundle isn't a shared bundle(unless we are trying to load it into another shared bundle for whatever reason)
-                //AND if this asset's super bundle name doesn't equal the bundles name(meaning this asset is loaded into the leveldata)
-                //AND this bundle isn't the same as the one we are adding to
-                if ((bentry.Type != BundleType.SharedBundle || BundleToCheck.Type == BundleType.SharedBundle || Config.Get("ModifySharedBundled", false)) && (App.AssetManager.GetSuperBundle(BundleToCheck.SuperBundleId).Name != bentry.Name || Config.Get("ModifyLevelBundled", false)) && bentry != BundleToCheck)
+                BundleEntry bundleEntry = App.AssetManager.GetBundleEntry(bundle);
+                switch (bundleToCheck.Type)
                 {
-                    IsValid = true; //The asset is valid 
-                }
-                else
-                {
-                    IsValid = false;
-                    break;
+                    case BundleType.SubLevel:
+                    {
+                        //If its a shared bundle its probably going to be already loaded
+                        //And if its a subworld bundle its definitely going to be already loaded
+                        switch (bundleEntry.Type)
+                        {
+                            case BundleType.SharedBundle:
+                            {
+                                isValid = false;
+                            } break;
+                            case BundleType.SubLevel:
+                            {
+                                if (HasSuperBundles)
+                                {
+                                    int levelBundle = App.AssetManager.GetBundleId(App.AssetManager.GetSuperBundle(bundleEntry.SuperBundleId).Name);
+                                    isValid = levelBundle != bundle;
+                                }
+                                else
+                                {
+                                    //TODO: Get parent bundle
+                                }
+                            } break;
+                        }
+                    } break;
                 }
             }
 
-            if (!IsValid) return IsValid || AssetToCheck.AddedBundles.Count + AssetToCheck.Bundles.Count == 0;
-            foreach (int bunID in AssetToCheck.AddedBundles)
-            {
-                BundleEntry bentry = App.AssetManager.GetBundleEntry(bunID);
-
-                //If this bundle isn't a shared bundle(unless we are trying to load it into another shared bundle for whatever reason)
-                //AND if this asset's super bundle name doesn't equal the bundles name(meaning this asset is loaded into the leveldata)
-                //AND this bundle isn't the same as the one we are adding to
-                if ((bentry.Type != BundleType.SharedBundle || BundleToCheck.Type == BundleType.SharedBundle ||
-                     Config.Get("ModifySharedBundled", false)) &&
-                    (App.AssetManager.GetSuperBundle(BundleToCheck.SuperBundleId).Name != bentry.Name ||
-                     Config.Get("ModifyLevelBundled", false)) && bentry != BundleToCheck)
-                {
-                    IsValid = true; //The asset is valid 
-                }
-                else
-                {
-                    IsValid = false;
-                    break;
-                }
-            }
-
-            return IsValid || AssetToCheck.AddedBundles.Count + AssetToCheck.Bundles.Count == 0;
+            return isValid;
         }
 
         /// <summary>
         /// This will check if an asset is valid for networking
         /// </summary>
-        /// <param name="AssetToCheck"></param>
-        /// <param name="BundleToCheck"></param>
+        /// <param name="assetToCheck"></param>
+        /// <param name="bundleToCheck"></param>
         /// <returns>A bool on whether or not the asset is valid</returns>
-        public static bool AssetAddNetworkValid(EbxAssetEntry AssetToCheck, BundleEntry BundleToCheck)
+        public static bool AssetAddNetworkValid(EbxAssetEntry assetToCheck, BundleEntry bundleToCheck)
         {
-            return networkedTypes.Contains(AssetToCheck.Type) && (networkedBundles.Contains(BundleToCheck.Name) || BundleToCheck.Added) && Config.Get("AllowRootNetreg", false);
+            return networkedTypes.Contains(assetToCheck.Type) && (networkedBundles.Contains(bundleToCheck.Name) || bundleToCheck.Added) && Config.Get("AllowRootNetreg", false);
         }
 
-        public static bool AssetAddMeshVariationValid(EbxAssetEntry AssetToCheck, BundleEntry BundleToCheck)
+        public static bool AssetAddMeshVariationValid(EbxAssetEntry assetToCheck, BundleEntry bundleToCheck)
         {
-            return (TypeLibrary.IsSubClassOf(AssetToCheck.Type, "MeshAsset") || AssetToCheck.Type == "ObjectVariation") && (mvdbBundles.Contains(BundleToCheck.Name) || BundleToCheck.Added) && Config.Get("AllowMVDB", false);
+            return (TypeLibrary.IsSubClassOf(assetToCheck.Type, "MeshAsset") || assetToCheck.Type == "ObjectVariation") && (mvdbBundles.Contains(bundleToCheck.Name) || bundleToCheck.Added) && Config.Get("AllowMVDB", false);
         }
 
         #endregion
@@ -1564,55 +1579,47 @@ namespace AdvancedBundleEditorPlugin
         /// <summary>
         /// This will check if an asset is valid for recursive adding
         /// </summary>
-        /// <param name="AssetToCheck"></param>
-        /// <param name="BundleToCheck"></param>
+        /// <param name="assetToCheck"></param>
+        /// <param name="bundleToCheck"></param>
         /// <returns>A bool on whether or not the asset is valid</returns>
-        public static bool AssetRecRemValid(EbxAssetEntry AssetToCheck, BundleEntry BundleToCheck)
+        public static bool AssetRecRemValid(EbxAssetEntry assetToCheck, BundleEntry bundleToCheck)
         {
-            bool IsValid = false;
+            bool isValid = false;
 
             //Enumerate over all of the bundles the asset has
-            foreach (int bunID in AssetToCheck.AddedBundles)
+            foreach (int bunId in assetToCheck.AddedBundles)
             {
-                BundleEntry bentry = App.AssetManager.GetBundleEntry(bunID);
-
-                //If this bundle isn't a shared bundle(unless we are trying to load it into another shared bundle for whatever reason)
-                //AND if this asset's super bundle name doesn't equal the bundles name(meaning this asset is loaded into the leveldata)
-                //AND this bundle isn't the same as the one we are adding to
-                if (BundleToCheck.DisplayName == bentry.DisplayName)
-                {
-                    IsValid = true; //The asset is valid 
-                }
-                else
-                {
-                    IsValid = false;
-                    break;
-                }
+                BundleEntry bentry = App.AssetManager.GetBundleEntry(bunId);
+                
+                if (bundleToCheck.DisplayName != bentry.DisplayName) continue;
+                
+                isValid = true; //The asset is valid
+                break;
             }
-            return IsValid;
+            return isValid;
         }
 
         /// <summary>
         /// This will check if an asset is valid for networking
         /// </summary>
-        /// <param name="AssetToCheck"></param>
-        /// <param name="BundleToCheck"></param>
+        /// <param name="assetToCheck"></param>
+        /// <param name="bundleToCheck"></param>
         /// <returns>A bool on whether or not the asset is valid</returns>
-        public static bool AssetRemNetworkValid(EbxAssetEntry AssetToCheck, BundleEntry BundleToCheck)
+        public static bool AssetRemNetworkValid(EbxAssetEntry assetToCheck, BundleEntry bundleToCheck)
         {
-            if (!networkedBundles.Contains(BundleToCheck.Name)) return false;
+            if (!networkedBundles.Contains(bundleToCheck.Name)) return false;
             
-            if (BundleToCheck.Added)
+            if (bundleToCheck.Added)
             {
-                return networkedTypes.Contains(AssetToCheck.Type) && Config.Get("AllowRootNetreg", false);
+                return networkedTypes.Contains(assetToCheck.Type) && Config.Get("AllowRootNetreg", false);
             }
-            EbxAssetEntry registry = App.AssetManager.GetEbxEntry(networkRegistries[networkedBundles.IndexOf(BundleToCheck.Name)].FileGuid);
-            return networkedTypes.Contains(AssetToCheck.Type) && (networkedBundles.Contains(BundleToCheck.Name) || BundleToCheck.Added) && Config.Get("AllowRootNetreg", false) && registry.EnumerateDependencies().Contains(AssetToCheck.Guid);
+            EbxAssetEntry registry = App.AssetManager.GetEbxEntry(networkRegistries[networkedBundles.IndexOf(bundleToCheck.Name)].FileGuid);
+            return networkedTypes.Contains(assetToCheck.Type) && (networkedBundles.Contains(bundleToCheck.Name) || bundleToCheck.Added) && Config.Get("AllowRootNetreg", false) && registry.EnumerateDependencies().Contains(assetToCheck.Guid);
         }
 
-        public static bool AssetRemMeshVariationValid(EbxAssetEntry AssetToCheck, BundleEntry BundleToCheck)
+        public static bool AssetRemMeshVariationValid(EbxAssetEntry assetToCheck, BundleEntry bundleToCheck)
         {
-            return (TypeLibrary.IsSubClassOf(AssetToCheck.Type, "MeshAsset") || AssetToCheck.Type == "ObjectVariation") && (mvdbBundles.Contains(BundleToCheck.Name) && App.AssetManager.GetEbxEntry(mvdbs[mvdbBundles.IndexOf(BundleToCheck.Name)].FileGuid).EnumerateDependencies().Contains(AssetToCheck.Guid) || BundleToCheck.Added) && Config.Get("AllowMVDB", false);
+            return (TypeLibrary.IsSubClassOf(assetToCheck.Type, "MeshAsset") || assetToCheck.Type == "ObjectVariation") && (mvdbBundles.Contains(bundleToCheck.Name) && App.AssetManager.GetEbxEntry(mvdbs[mvdbBundles.IndexOf(bundleToCheck.Name)].FileGuid).EnumerateDependencies().Contains(assetToCheck.Guid) || bundleToCheck.Added) && Config.Get("AllowMVDB", false);
         }
 
         #endregion
@@ -1622,52 +1629,52 @@ namespace AdvancedBundleEditorPlugin
         /// <summary>
         /// This will check if an asset is valid for the AddAsset Bundle Operation
         /// </summary>
-        /// <param name="AssetToCheck"></param>
-        /// <param name="BundleToCheck"></param>
+        /// <param name="assetToCheck"></param>
+        /// <param name="bundleToCheck"></param>
         /// <returns>A bool on whether or not the asset is valid</returns>
-        public static bool AssetOpAddValid(EbxAssetEntry AssetToCheck, BundleEntry BundleToCheck)
+        public static bool AssetOpAddValid(EbxAssetEntry assetToCheck, BundleEntry bundleToCheck)
         {
-            bool IsValid = false;
+            bool isValid = false;
 
             //Enumerate over all of the bundles the asset has
-            foreach (int bunID in AssetToCheck.Bundles)
+            foreach (int bunId in assetToCheck.Bundles)
             {
-                BundleEntry bentry = App.AssetManager.GetBundleEntry(bunID);
+                BundleEntry bentry = App.AssetManager.GetBundleEntry(bunId);
 
                 //If this bundle isn't a shared bundle(unless we are trying to load it into another shared bundle for whatever reason)
                 //AND if this asset's super bundle name doesn't equal the bundles name(meaning this asset is loaded into the leveldata)
                 //AND this bundle isn't the same as the one we are adding to
-                if ((bentry.Type != BundleType.SharedBundle) && (App.AssetManager.GetSuperBundle(BundleToCheck.SuperBundleId).Name != bentry.Name) && bentry != BundleToCheck)
+                if ((bentry.Type != BundleType.SharedBundle) && (App.AssetManager.GetSuperBundle(bundleToCheck.SuperBundleId).Name != bentry.Name) && bentry != bundleToCheck)
                 {
-                    IsValid = true; //The asset is valid 
+                    isValid = true; //The asset is valid 
                 }
                 else
                 {
-                    IsValid = false;
+                    isValid = false;
                     break;
                 }
             }
 
-            if (!IsValid) return IsValid || AssetToCheck.AddedBundles.Count + AssetToCheck.Bundles.Count == 0;
-            foreach (int bunID in AssetToCheck.AddedBundles)
+            if (!isValid) return isValid || assetToCheck.AddedBundles.Count + assetToCheck.Bundles.Count == 0;
+            foreach (int bunId in assetToCheck.AddedBundles)
             {
-                BundleEntry bentry = App.AssetManager.GetBundleEntry(bunID);
+                BundleEntry bentry = App.AssetManager.GetBundleEntry(bunId);
 
                 //If this bundle isn't a shared bundle(unless we are trying to load it into another shared bundle for whatever reason)
                 //AND if this asset's super bundle name doesn't equal the bundles name(meaning this asset is loaded into the leveldata)
                 //AND this bundle isn't the same as the one we are adding to
-                if ((bentry.Type != BundleType.SharedBundle) && (App.AssetManager.GetSuperBundle(BundleToCheck.SuperBundleId).Name != bentry.Name) && bentry != BundleToCheck)
+                if ((bentry.Type != BundleType.SharedBundle) && (App.AssetManager.GetSuperBundle(bundleToCheck.SuperBundleId).Name != bentry.Name) && bentry != bundleToCheck)
                 {
-                    IsValid = true; //The asset is valid 
+                    isValid = true; //The asset is valid 
                 }
                 else
                 {
-                    IsValid = false;
+                    isValid = false;
                     break;
                 }
             }
 
-            return IsValid || AssetToCheck.AddedBundles.Count + AssetToCheck.Bundles.Count == 0;
+            return isValid || assetToCheck.AddedBundles.Count + assetToCheck.Bundles.Count == 0;
         }      
 
         #endregion

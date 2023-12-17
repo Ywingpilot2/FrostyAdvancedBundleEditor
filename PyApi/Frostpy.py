@@ -2,7 +2,6 @@
 This modules contains all of the methods variables and classes you will need in order to make a Bundle Operation
 """
 
-
 # NOTICE:
 # The scripts here are just dummy scripts, and will be replaced when parsed by the Bundle Operator.
 # this is done for simplicity on your part
@@ -16,8 +15,8 @@ class BunpyApi:  # really annoying work around. We shove everything inside a cla
         An EBX asset to check with. This contains the type, the filename, and filepath.
         """
 
-        def __init__(self, assetPath: str):
-            self.FilePath = assetPath
+        def __init__(self, asset_path: str):
+            self.FilePath = asset_path
 
         FilePath = ""
         """
@@ -67,63 +66,139 @@ class BunpyApi:  # really annoying work around. We shove everything inside a cla
         To create this, all you need is to input the name of the bundle.
         """
 
+        Name = ""
+        """
+        The name of this bundle
+        """
+        Type = ""
+        """
+        The type of this bundle, so Shared, Sublevel, Blueprint
+        """
+        SuperBundle = ""
+        """
+        The name of this bundles Super Bundle
+        """
+
         def __init__(self, bundle_name: str):
             self.Name = bundle_name
 
-        def GetBlueprint(self):
+        def get_blueprint(self):
             """
             :return: The asset which this bundle is associated with
             """
             pass
 
-        def GetBundleType(self) -> str:
-            """
-            The type of bundle this is. This can be Shared, Sublevel, or Blueprint.
-            :return: The name of this super bundles type(Shared, Sublevel, Blueprint)
-            """
-            return "self.type"
-
-        def GetSuperBundle(self) -> str:
-            """
-            This returns the Bundles parent SuperBundle. Some games(e.g swbf2) do not have this.
-            You can check by going into frosty, then in the "Super Bundles" tab of an asset, if it only displays "<none>" that means the game does not have SuperBundles.
-            :return: The name of the bundles superbundle
-            """
-            return "self.superbundle"
-
-    def AddAsset(AssetsToAdd: Asset, SelectedBundles: Bundle, ForceAdd=False, Recursive=False, AddToNetregs=False,
-                 AddToMeshVariations=False):
+    def AddToBundle(asset: Asset, bundle: Bundle):
         """
-        Add assets to bundles, if they are valid for adding.
-        :param AssetsToAdd: The assets that need have Bundles added.
-        :param SelectedBundles: The bundles that will be added
-        :param ForceAdd: This will disregard whether or not the assets(or referenced ones) are valid, and forcefully modify it.
-        :param Recursive: Whether or not all referenced assets should have this done too. This includes references of references, this will recursively search down the reference chain until it cannot anymore.
-        :param AddToNetregs: Whether or not to add the assets to Network Registries
-        :param AddToMeshVariations: Whether or not to add the assets to MeshVariationDatabases
+        This adds an Asset to a Bundle
+        :param asset: The asset you want to add
+        :param bundle: The bundle to add it to
         """
         pass
 
-    def RemoveAsset(AssetsToRemove: Asset, SelectedBundles: Bundle, ForceAdd=False, Recursive=False,
-                    RemoveFromNetregs=False, RemoveFromMeshVariations=False):
+    def AddToReg(asset: Asset, bundle: Bundle):
         """
-        Remove assets from bundles, if they are valid for removal.
-        :param AssetsToRemove: The assets that need have Bundles removed.
-        :param SelectedBundles: The bundles that will be affected
-        :param ForceAdd: This will disregard whether or not the assets(or referenced ones) are valid, and forcefully modify it.
-        :param Recursive: Whether or not all referenced assets should have this done too. This includes references of references, this will recursively search down the reference chain until it cannot anymore.
-        :param RemoveFromNetregs: Whether or not to remove the assets from Network Registries
-        :param RemoveFromMeshVariations: Whether or not to remove assets from MeshVariationDatabases
+        This adds an Asset to the Bundles assigned network registry
+        :param asset: The asset you want to add
+        :param bundle: The bundle to add it to
         """
         pass
 
-    def ClearAsset(AssetsToRemove: Asset, Recursive=False, RemoveFromNetregs=False, RemoveFromMeshVariations=False):
+    def AddToMvdb(asset: Asset, bundle: Bundle):
         """
-        Clear all of the AddedBundles of all of the selected assets.
-        :param AssetsToRemove: The assets that need have their bundles cleared.
-        :param Recursive: Whether or not all referenced assets should have this done too. This includes references of references, this will recursively search down the reference chain until it cannot anymore.
-        :param RemoveFromNetregs: Whether or not to remove the assets from Network Registries
-        :param RemoveFromMeshVariations: Whether or not to remove assets from MeshVariationDatabases
+        This adds an Asset to the Bundles assigned Mesh Variation Database
+        :param asset: The asset you want to add
+        :param bundle: The bundle to add it to
+        """
+        pass
+
+    def RemFromBundle(asset: Asset, bundle: Bundle):
+        """
+        This removes an Asset from a Bundle
+        :param asset: The asset you want to remove
+        :param bundle: The bundle to remove it from
+        """
+        pass
+
+    def RemFromReg(asset: Asset, bundle: Bundle):
+        """
+        This removes an Asset from a Bundle's Network Registry
+        :param asset: The asset you want to remove
+        :param bundle: The bundle to remove it from
+        """
+        pass
+
+    def RemFromMvdb(asset: Asset, bundle: Bundle):
+        """
+        This removes an Asset from a Bundle's Mesh Variation Database
+        :param asset: The asset you want to remove
+        :param bundle: The bundle to remove it from
+        """
+        pass
+
+    def RecAddToBundle(asset: Asset, bundle: Bundle):
+        """
+        This recursively adds an Asset to a Bundle
+        :param asset: The asset you want to add
+        :param bundle: The bundle to add it to
+        """
+        pass
+
+    def RecAddToReg(asset: Asset, bundle: Bundle):
+        """
+        This recursively adds an Asset to a Bundles Network Registry
+        :param asset: The asset you want to add
+        :param bundle: The bundle to add it to
+        """
+        pass
+
+    def RecAddToMvdb(asset: Asset, bundle: Bundle):
+        """
+        This recursively adds an Asset to a Bundles Mesh Variation Database
+        :param asset: The asset you want to add
+        :param bundle: The bundle to add it to
+        """
+        pass
+
+    def RecRemFromBundle(asset: Asset, bundle: Bundle):
+        """
+        This recursively removes an Asset from a Bundle
+        :param asset: The asset you want to add
+        :param bundle: The bundle to add it to
+        """
+        pass
+
+    def RecRemFromReg(asset: Asset, bundle: Bundle):
+        """
+        This recursively removes an Asset from a Bundles Network Registry
+        :param asset: The asset you want to add
+        :param bundle: The bundle to add it to
+        """
+        pass
+
+    def RecRemFromMvdb(asset: Asset, bundle: Bundle):
+        """
+        This recursively removes an Asset from a Bundles Mesh Variation Database
+        :param asset: The asset you want to add
+        :param bundle: The bundle to add it to
+        """
+        pass
+
+    def CompletelyAddAsset(asset: Asset, bundle: Bundle, recursive=True):
+        """
+        This will add an asset to everything it needs to a bundle alongside everything else it needs to be in to function correctly.
+        :param asset: The asset you want to add
+        :param bundle: The bundle to add it to
+        :param recursive: Whether or not you want to do this operation recursively
+        """
+        pass
+
+    def CompletelyRemoveAsset(asset: Asset, bundle: Bundle, recursive=True):
+        """
+        This will remove an asset to everything it needs to a bundle alongside everything else it needs to be in to function correctly.
+        :param asset: The asset you want to remove
+        :param bundle: The bundle to remove it from
+        :param recursive: Whether or not you want to do this operation recursively
         """
         pass
 
@@ -159,11 +234,14 @@ class BunpyApi:  # really annoying work around. We shove everything inside a cla
         """
         return []
 
-
     def Log(Message: str):
         pass
 
     SelectedAsset = Asset("")
     """
     The currently selected asset in the Data Explorer
+    """
+    SelectedBundle = Bundle("")
+    """
+    The currently selected Bundle in the Bundle Editor
     """
