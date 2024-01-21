@@ -995,14 +995,13 @@ namespace AdvancedBundleEditorPlugin
         public static void AddAssetToNetRegs(EbxAssetEntry assetToBundle, BundleEntry selectedBundle)
         {
             EbxAsset ebx = App.AssetManager.GetEbx(assetToBundle);
-            List<object> ebxObjects = ebx.Objects.ToList();
 
             if (!selectedBundle.Added)
             {
                 EbxAsset netRegEbx = networkRegistries[networkedBundles.IndexOf(selectedBundle.Name)];
                 List<PointerRef> objects = ((dynamic)netRegEbx.RootObject).Objects;
 
-                foreach (object obj in ebxObjects)
+                foreach (object obj in ebx.ExportedObjects)
                 {
                     PointerRef pointer = new PointerRef(new EbxImportReference()
                         { FileGuid = assetToBundle.Guid, ClassGuid = ((dynamic)obj).GetInstanceGuid().ExportedGuid });
@@ -1024,7 +1023,7 @@ namespace AdvancedBundleEditorPlugin
                         EbxAsset netRegEbx = App.AssetManager.GetEbx(networkRegistry);
                         List<PointerRef> objects = ((dynamic)netRegEbx.RootObject).Objects;
 
-                        foreach (object obj in ebxObjects)
+                        foreach (object obj in ebx.ExportedObjects)
                         {
                             PointerRef pointer = new PointerRef(new EbxImportReference()
                             {
